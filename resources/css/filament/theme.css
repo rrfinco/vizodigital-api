@@ -1,0 +1,126 @@
+@import '../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../app/Filament/**/*';
+@source '../../../resources/views/filament/**/*';
+@source '../../../vendor/filament/**/*.blade.php';
+
+.fi-sidebar-header {
+    min-height: 4rem;
+}
+
+.fi-topbar {
+    min-height: 4rem;
+}
+
+.fi-main {
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+}
+
+.fi-main-ctn {
+    flex: 1 1 auto;
+}
+
+.fi-footer {
+    margin-top: auto;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(248, 250, 252, 0.95);
+}
+
+.dark .fi-footer {
+    border-top-color: rgba(148, 163, 184, 0.16);
+    background: rgba(15, 23, 42, 0.85);
+}
+
+.crm-topbar-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    background: rgba(248, 250, 252, 1);
+    padding: 0.2rem 0.55rem;
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: rgb(51, 65, 85);
+}
+
+.dark .crm-topbar-chip {
+    border-color: rgba(148, 163, 184, 0.2);
+    background: rgba(30, 41, 59, 0.8);
+    color: rgb(226, 232, 240);
+}
+
+.crm-sidebar-footer {
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 0.875rem 1rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: rgb(100, 116, 139);
+}
+
+.dark .crm-sidebar-footer {
+    border-top-color: rgba(148, 163, 184, 0.16);
+    color: rgb(148, 163, 184);
+}
+
+.crm-sidebar-logout {
+    margin-top: 0.75rem;
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: rgba(254, 242, 242, 1);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: rgb(185, 28, 28);
+    cursor: pointer;
+}
+
+.crm-sidebar-logout:hover {
+    background: rgba(254, 226, 226, 1);
+}
+
+.dark .crm-sidebar-logout {
+    border-color: rgba(248, 113, 113, 0.35);
+    background: rgba(127, 29, 29, 0.35);
+    color: rgb(254, 202, 202);
+}
+
+.crm-footer-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.875rem 1.5rem;
+    font-size: 0.75rem;
+    color: rgb(100, 116, 139);
+}
+
+.dark .crm-footer-bar {
+    color: rgb(148, 163, 184);
+}
+
+.crm-footer-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.crm-footer-links a {
+    font-weight: 500;
+    color: inherit;
+    text-decoration: none;
+}
+
+.crm-footer-links a:hover {
+    color: rgb(37, 99, 235);
+}
+
+.dark .crm-footer-links a:hover {
+    color: rgb(96, 165, 250);
+}
+
