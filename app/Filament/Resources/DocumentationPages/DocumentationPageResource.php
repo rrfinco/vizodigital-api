@@ -33,6 +33,8 @@ class DocumentationPageResource extends Resource
 
     protected static ?string $navigationLabel = 'Pages';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function form(Schema $schema): Schema
     {
         return DocumentationPageForm::configure($schema);

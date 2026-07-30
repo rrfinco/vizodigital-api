@@ -37,6 +37,8 @@ class NavigationItemResource extends Resource
 
     protected static ?string $navigationLabel = 'Navigation';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function form(Schema $schema): Schema
     {
         return NavigationItemForm::configure($schema);

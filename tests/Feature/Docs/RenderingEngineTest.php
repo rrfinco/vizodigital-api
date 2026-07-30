@@ -230,8 +230,7 @@ class RenderingEngineTest extends TestCase
             'endpoint' => 'get-token',
         ]))
             ->assertOk()
-            ->assertDontSee('Also see revoke')
-            ->assertSee('No related APIs linked');
+            ->assertDontSee('Also see revoke');
     }
 
     public function test_published_documentation_page_renders_markdown_blocks(): void

@@ -10,9 +10,6 @@
                 <p class="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
                     We sent a KYC upload link to your inbox. Complete document verification, then wait for admin approval before signing in.
                 </p>
-                <p class="mt-6 text-xs text-slate-400">
-                    Local mail is logged to <span class="font-mono">storage/logs</span> when <span class="font-mono">MAIL_MAILER=log</span>.
-                </p>
                 <a href="{{ route('landing') }}" class="portal-btn-secondary mt-8 inline-flex">Back to home</a>
             </div>
         </div>

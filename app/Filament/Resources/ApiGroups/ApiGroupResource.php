@@ -33,6 +33,8 @@ class ApiGroupResource extends Resource
 
     protected static ?string $navigationLabel = 'Groups';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function form(Schema $schema): Schema
     {
         return ApiGroupForm::configure($schema);

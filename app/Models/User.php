@@ -28,6 +28,7 @@ class User extends Authenticatable implements FilamentUser
         'password',
         'company_name',
         'phone',
+        'wallet_balance',
         'onboarding_status',
         'kyc_token',
         'kyc_token_expires_at',
@@ -35,6 +36,7 @@ class User extends Authenticatable implements FilamentUser
         'approved_at',
         'approved_by',
         'rejection_reason',
+        'earning_balance',
     ];
 
     /**
@@ -58,6 +60,8 @@ class User extends Authenticatable implements FilamentUser
             'kyc_token_expires_at' => 'datetime',
             'kyc_submitted_at' => 'datetime',
             'approved_at' => 'datetime',
+            'wallet_balance' => 'decimal:4',
+            'earning_balance' => 'decimal:4',
         ];
     }
 
@@ -74,6 +78,77 @@ class User extends Authenticatable implements FilamentUser
     public function approvedBy(): BelongsTo
     {
         return $this->belongsTo(self::class, 'approved_by');
+    }
+
+    public function rechargeTransactions(): HasMany
+    {
+        return $this->hasMany(RechargeTransaction::class);
+    }
+
+    public function walletTransactions(): HasMany
+    {
+        return $this->hasMany(WalletTransaction::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(UserSubscription::class);
+    }
+
+    public function activeSubscription(): ?UserSubscription
+    {
+        return $this->subscriptions()
+            ->where('status', 'active')
+            ->where('ends_at', '>', now())
+            ->latest('ends_at')
+            ->first();
+    }
+
+    public function debitWallet(float $amount, string $description, ?\Illuminate\Database\Eloquent\Model $reference = null): WalletTransaction
+    {
+        $amount = abs($amount);
+        if ($this->wallet_balance < $amount) {
+            throw new \Exception('Insufficient wallet balance.');
+        }
+
+        $balanceBefore = (float) $this->wallet_balance;
+        $this->wallet_balance -= $amount;
+        $this->save();
+
+        return $this->walletTransactions()->create([
+            'amount' => -$amount,
+            'type' => 'debit',
+            'description' => $description,
+            'reference_type' => $reference ? get_class($reference) : null,
+            'reference_id' => $reference ? $reference->getKey() : null,
+            'balance_before' => $balanceBefore,
+            'balance_after' => (float) $this->wallet_balance,
+        ]);
+    }
+
+    public function creditWallet(float $amount, string $description, ?\Illuminate\Database\Eloquent\Model $reference = null): WalletTransaction
+    {
+        $amount = abs($amount);
+        $balanceBefore = (float) $this->wallet_balance;
+        $this->wallet_balance += $amount;
+        $this->save();
+
+        return $this->walletTransactions()->create([
+            'amount' => $amount,
+            'type' => 'credit',
+            'description' => $description,
+            'reference_type' => $reference ? get_class($reference) : null,
+            'reference_id' => $reference ? $reference->getKey() : null,
+            'balance_before' => $balanceBefore,
+            'balance_after' => (float) $this->wallet_balance,
+        ]);
+    }
+
+    public function addEarning(float $amount): void
+    {
+        $amount = abs($amount);
+        $this->earning_balance += $amount;
+        $this->save();
     }
 
     public function canAccessPanel(Panel $panel): bool

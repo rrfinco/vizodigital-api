@@ -23,7 +23,7 @@ class CredentialProvisioner
             ],
             [
                 'client_id' => $this->clientId('uat', $user),
-                'api_secret' => Str::password(40),
+                'api_secret' => 'sec_uat_' . Str::random(40),
                 'merchant_id' => 'MERCHANT_UAT_'.$user->id,
                 'webhook_secret' => 'whsec_'.Str::lower(Str::random(32)),
                 'status' => CredentialStatus::Active,
@@ -52,7 +52,7 @@ class CredentialProvisioner
             ],
             [
                 'client_id' => $existing?->client_id ?: $this->clientId('live', $user),
-                'api_secret' => Str::password(40),
+                'api_secret' => 'sec_live_' . Str::random(40),
                 'merchant_id' => $existing?->merchant_id ?: 'MERCHANT_LIVE_'.$user->id,
                 'webhook_secret' => 'whsec_'.Str::lower(Str::random(32)),
                 'status' => CredentialStatus::Active,

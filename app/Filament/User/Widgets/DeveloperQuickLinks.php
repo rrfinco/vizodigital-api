@@ -6,6 +6,8 @@ use Filament\Widgets\Widget;
 
 class DeveloperQuickLinks extends Widget
 {
+    protected static bool $isDiscovered = false;
+
     protected string $view = 'filament.user.widgets.developer-quick-links';
 
     protected int|string|array $columnSpan = 'full';

@@ -4,12 +4,13 @@ namespace App\Providers\Filament;
 
 use App\Filament\Concerns\ConfiguresCrmPanelLayout;
 use App\Filament\User\Pages\Dashboard as UserDashboard;
+use App\Filament\User\Pages\Profile as UserProfile;
+use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\NavigationGroup;
-use Filament\Navigation\NavigationItem;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -37,14 +38,6 @@ class UserPanelProvider extends PanelProvider
             ])
             ->navigationGroups([
                 NavigationGroup::make('Workspace')->collapsible(false),
-                NavigationGroup::make('Account')->collapsible(),
-            ])
-            ->navigationItems([
-                NavigationItem::make('Open public docs')
-                    ->url(fn (): string => route('docs.overview'), shouldOpenInNewTab: true)
-                    ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
-                    ->group('Workspace')
-                    ->sort(30),
             ])
             ->discoverPages(in: app_path('Filament/User/Pages'), for: 'App\\Filament\\User\\Pages')
             ->pages([
@@ -66,6 +59,18 @@ class UserPanelProvider extends PanelProvider
                 Authenticate::class,
             ]);
 
-        return $this->configureCrmLayout($panel, 'vizodigital api docs');
+        return $this->configureCrmLayout($panel, 'vizodigital api docs')
+            ->userMenuItems([
+                'profile' => Action::make('profile')
+                    ->label('Profile')
+                    ->icon(Heroicon::OutlinedUserCircle)
+                    ->url(fn (): string => UserProfile::getUrl())
+                    ->sort(10),
+                'logout' => Action::make('logout')
+                    ->label('Log out')
+                    ->icon(Heroicon::ArrowLeftEndOnRectangle)
+                    ->url(fn (): string => filament()->getLogoutUrl())
+                    ->postToUrl(),
+            ]);
     }
 }

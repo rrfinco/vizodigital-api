@@ -73,22 +73,6 @@
                             'secret' => true,
                         ])
 
-                        @if (filled($credential->merchant_id))
-                            @include('filament.user.partials.credential-field', [
-                                'label' => 'Merchant ID',
-                                'value' => $credential->merchant_id,
-                                'secret' => false,
-                            ])
-                        @endif
-
-                        @if (filled($credential->webhook_secret))
-                            @include('filament.user.partials.credential-field', [
-                                'label' => 'Webhook Secret',
-                                'value' => $credential->webhook_secret,
-                                'secret' => true,
-                            ])
-                        @endif
-
                         @include('filament.user.partials.credential-field', [
                             'label' => 'Base URL',
                             'value' => $environment->base_url,

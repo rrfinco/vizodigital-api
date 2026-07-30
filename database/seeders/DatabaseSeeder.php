@@ -14,6 +14,9 @@ class DatabaseSeeder extends Seeder
             CmsFoundationSeeder::class,
             ApiCredentialSeeder::class,
             AuthDocumentationSeeder::class,
+            RechargeDocumentationSeeder::class,
+            WalletDocumentationSeeder::class,
+            BillPaymentDocumentationSeeder::class,
         ]);
     }
 }

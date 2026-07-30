@@ -7,7 +7,6 @@ use App\Enums\ParameterLocation;
 use App\Enums\PublishStatus;
 use App\Enums\Role;
 use App\Enums\SectionKey;
-use App\Filament\RelationManagers\BaseUrlsRelationManager;
 use App\Filament\Resources\ApiEndpoints\ApiEndpointResource;
 use App\Filament\Resources\ApiEndpoints\Pages\EditApiEndpoint;
 use App\Filament\Resources\ApiEndpoints\RelationManagers\CodeSamplesRelationManager;
@@ -109,16 +108,13 @@ class EndpointComposerTest extends TestCase
         $relations = ApiEndpointResource::getRelations();
 
         $this->assertSame([
-            SectionsRelationManager::class,
             HeadersRelationManager::class,
             ParametersRelationManager::class,
             RequestBodiesRelationManager::class,
             ResponsesRelationManager::class,
             ErrorsRelationManager::class,
-            NotesRelationManager::class,
             ExamplesRelationManager::class,
             CodeSamplesRelationManager::class,
-            BaseUrlsRelationManager::class,
         ], $relations);
     }
 

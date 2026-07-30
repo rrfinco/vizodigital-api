@@ -32,18 +32,24 @@ class AuthDocumentationSeeder extends Seeder
                 'type' => DocPageType::Authentication,
                 'title' => 'Authentication',
                 'body_md' => <<<'MD'
-# Authentication
+Call this **before** any Recharge or Bill Payment API. Exchange your keys for a Bearer token, then send that token on every request.
 
-This is the **first API** you must call before any business endpoint.
+## Credentials
+
+Copy these from **Developer panel → API Keys**:
+
+* **Client ID** — public identifier used to request an access token
+* **API Secret** — private key; never expose it in client-side code
+* **Base URL** — UAT or Production host for API calls
 
 ## Prerequisites
 
 1. Sign up on the portal
 2. Complete KYC from the email link
 3. Wait until an admin approves your application
-4. Copy **UAT** `client_id` and `api_secret` from **Developer panel → API Keys**
+4. Copy your UAT credentials from **API Keys**
 
-## Exchange client credentials
+## Get a Bearer token
 
 ```http
 POST /api/v1/auth/client-credentials
@@ -56,7 +62,18 @@ Content-Type: application/json
 }
 ```
 
-Successful responses return a Bearer token. Use:
+Example success response:
+
+```json
+{
+  "token": "1|xxxxxxxx",
+  "token_type": "Bearer",
+  "environment": "uat",
+  "base_url": "https://..."
+}
+```
+
+Send the token on every business API call:
 
 ```http
 Authorization: Bearer {token}
@@ -64,26 +81,9 @@ Authorization: Bearer {token}
 
 ## Environment rules
 
-- **UAT** credentials only work against the UAT base URL. Missing or inactive UAT keys return an error.
-- **Production** credentials work only after an admin unlocks live access. Pending / missing live keys return an error.
-- Do not send UAT secrets to production hosts (or the reverse).
-
-## Portal login token (optional)
-
-Staff / approved developers can also mint a Sanctum token with email + password:
-
-```http
-POST /api/v1/auth/token
-```
-
-## Check environment access
-
-```http
-POST /api/v1/auth/credentials/check
-Authorization: Bearer {token}
-
-{ "environment": "uat" }
-```
+- **UAT** credentials only work against the UAT base URL
+- **Production** credentials appear only after an admin unlocks live access
+- Do not mix UAT secrets with the Production host (or the reverse)
 MD,
                 'status' => PublishStatus::Published,
                 'sidebar_key' => 'authentication',

@@ -127,6 +127,12 @@ class ApiEndpoint extends Model
         )->withPivot(['label', 'sort_order'])->withTimestamps();
     }
 
+    public function subscriptionPlans(): BelongsToMany
+    {
+        return $this->belongsToMany(SubscriptionPlan::class, 'subscription_plan_api_endpoint')
+            ->withTimestamps();
+    }
+
     public function baseUrls(): MorphMany
     {
         return $this->morphMany(EndpointBaseUrl::class, 'urlable');

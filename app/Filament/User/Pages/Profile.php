@@ -19,5 +19,7 @@ class Profile extends Page
 
     protected static ?string $title = 'My profile';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     protected string $view = 'filament.user.pages.profile';
 }

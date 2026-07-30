@@ -9,6 +9,7 @@ use App\Enums\PublishStatus;
 use App\Models\ApiEndpoint;
 use App\Models\ApiEnvironment;
 use App\Repositories\Contracts\EnvironmentRepositoryInterface;
+use App\Services\Cms\DefaultApiGroupResolver;
 use App\Services\Environment\BaseUrlResolver;
 use Illuminate\Support\Collection;
 
@@ -48,7 +49,9 @@ class EndpointDocumentBuilder
             versionSlug: $endpoint->version?->slug ?? '',
             versionName: $endpoint->version?->name,
             categoryName: $endpoint->group?->category?->name,
-            groupName: $endpoint->group?->name,
+            groupName: app(DefaultApiGroupResolver::class)->isDefault($endpoint->group)
+                ? null
+                : $endpoint->group?->name,
             baseUrl: $environment
                 ? $this->baseUrls->forEndpoint($endpoint, $environment)
                 : null,

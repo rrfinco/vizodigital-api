@@ -25,8 +25,9 @@ class DeveloperHeroCards extends Widget
             'userName' => $user?->name ?? 'Developer',
             'dateLabel' => $now->format('d M Y'),
             'greeting' => $this->greetingFor($now),
-            'docsUrl' => route('docs.overview'),
-            'portalUrl' => url('/'),
+            'walletBalance' => (float) ($user?->wallet_balance ?? 0),
+            'earningBalance' => (float) ($user?->earning_balance ?? 0),
+            'walletUrl' => \App\Filament\User\Pages\Wallet::getUrl(),
         ];
     }
 

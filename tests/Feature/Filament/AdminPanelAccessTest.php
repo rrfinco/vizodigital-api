@@ -73,6 +73,18 @@ class AdminPanelAccessTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_developer_user_panel_shows_dashboard_and_api_docs(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(Role::Developer->value);
+
+        $this->actingAs($user)
+            ->get('/user')
+            ->assertOk()
+            ->assertSee('Dashboard')
+            ->assertSee('API Docs');
+    }
+
     public function test_cms_resources_are_registered(): void
     {
         $this->assertSame('Versions', ApiVersionResource::getNavigationLabel());

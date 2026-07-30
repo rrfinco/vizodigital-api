@@ -32,6 +32,8 @@ class SdkPackageResource extends Resource
 
     protected static ?string $navigationLabel = 'SDK packages';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function form(Schema $schema): Schema
     {
         return SdkPackageForm::configure($schema);

@@ -32,6 +32,8 @@ class PostmanCollectionResource extends Resource
 
     protected static ?string $navigationLabel = 'Postman';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function form(Schema $schema): Schema
     {
         return PostmanCollectionForm::configure($schema);

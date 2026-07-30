@@ -13,9 +13,9 @@ class Documentation extends Page
 
     protected static string|UnitEnum|null $navigationGroup = 'Workspace';
 
-    protected static ?int $navigationSort = 20;
+    protected static ?int $navigationSort = 12;
 
-    protected static ?string $navigationLabel = 'Documentation';
+    protected static ?string $navigationLabel = 'API Docs';
 
     protected static ?string $title = 'API Documentation';
 

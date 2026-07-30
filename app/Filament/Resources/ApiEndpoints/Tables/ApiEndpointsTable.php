@@ -33,8 +33,8 @@ class ApiEndpointsTable
                     ->searchable()
                     ->copyable()
                     ->fontFamily('mono'),
-                TextColumn::make('group.name')
-                    ->label('Group')
+                TextColumn::make('group.category.name')
+                    ->label('Category')
                     ->sortable()
                     ->toggleable(),
                 TextColumn::make('version.name')

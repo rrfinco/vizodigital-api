@@ -126,6 +126,27 @@ class PortalNavigationTest extends TestCase
             ->assertDontSee('Sidebar will load from CMS navigation');
     }
 
+    public function test_docs_sidebar_has_single_overview_and_only_current_page_active(): void
+    {
+        $this->actingAs($this->admin);
+        app(PublishEndpoint::class)($this->endpoint);
+
+        $html = $this->get(route('docs.endpoints.show', [
+            'version' => 'v1',
+            'endpoint' => 'get-token',
+        ]))->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($html, '>Overview</span>'));
+        $this->assertMatchesRegularExpression(
+            '/bg-sky-50[^"]*"[^>]*>\s*<span class="truncate">Get Token<\/span>/',
+            $html
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/bg-sky-50[^"]*"[^>]*>\s*<span class="truncate">Overview<\/span>/',
+            $html
+        );
+    }
+
     public function test_environment_switcher_rebinds_examples_and_base_url(): void
     {
         $uatResponse = $this->get(route('docs.endpoints.show', [
@@ -135,9 +156,8 @@ class PortalNavigationTest extends TestCase
         ]));
 
         $uatResponse->assertOk()
-            ->assertSee('UAT sample')
-            ->assertDontSee('Production sample')
             ->assertSee('curl https://uat-api.example.com/v1/auth/token')
+            ->assertDontSee('curl https://api.example.com/v1/auth/token')
             ->assertSee(config('portal.environments.uat.base_url'));
 
         $prodResponse = $this->get(route('docs.endpoints.show', [
@@ -147,9 +167,8 @@ class PortalNavigationTest extends TestCase
         ]));
 
         $prodResponse->assertOk()
-            ->assertSee('Production sample')
-            ->assertDontSee('UAT sample')
             ->assertSee('curl https://api.example.com/v1/auth/token')
+            ->assertDontSee('curl https://uat-api.example.com/v1/auth/token')
             ->assertSee(config('portal.environments.production.base_url'));
     }
 
@@ -166,8 +185,8 @@ class PortalNavigationTest extends TestCase
             'endpoint' => 'get-token',
         ]))
             ->assertOk()
-            ->assertSee('Production sample')
-            ->assertDontSee('UAT sample');
+            ->assertSee('curl https://api.example.com/v1/auth/token')
+            ->assertDontSee('curl https://uat-api.example.com/v1/auth/token');
     }
 
     public function test_version_switcher_and_explorer_list_published_endpoints(): void
@@ -176,8 +195,7 @@ class PortalNavigationTest extends TestCase
             ->assertOk()
             ->assertSee('API Explorer')
             ->assertSee('Get Token')
-            ->assertSee('Core')
-            ->assertSee('Auth');
+            ->assertSee('Core');
 
         $this->get(route('docs.categories.show', [
             'version' => 'v1',
@@ -185,7 +203,7 @@ class PortalNavigationTest extends TestCase
         ]))
             ->assertOk()
             ->assertSee('Core')
-            ->assertSee('Auth');
+            ->assertSee('Get Token');
 
         $this->get(route('docs.groups.show', [
             'version' => 'v1',

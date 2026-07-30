@@ -30,6 +30,8 @@ class AuditLogResource extends Resource
 
     protected static ?string $navigationLabel = 'Audit log';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function canCreate(): bool
     {
         return false;

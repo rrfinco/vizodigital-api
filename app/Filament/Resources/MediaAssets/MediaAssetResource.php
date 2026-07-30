@@ -32,6 +32,8 @@ class MediaAssetResource extends Resource
 
     protected static ?string $navigationLabel = 'Media';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function form(Schema $schema): Schema
     {
         return MediaAssetForm::configure($schema);

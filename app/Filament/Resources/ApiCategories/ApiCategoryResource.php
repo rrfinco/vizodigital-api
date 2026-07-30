@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\ApiCategories;
 
 use App\Filament\Concerns\HasCmsResourceAuthorization;
-use App\Filament\RelationManagers\BaseUrlsRelationManager;
 use App\Filament\Resources\ApiCategories\Pages\CreateApiCategory;
 use App\Filament\Resources\ApiCategories\Pages\EditApiCategory;
 use App\Filament\Resources\ApiCategories\Pages\ListApiCategories;
@@ -45,9 +44,7 @@ class ApiCategoryResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            BaseUrlsRelationManager::class,
-        ];
+        return [];
     }
 
     public static function getPages(): array

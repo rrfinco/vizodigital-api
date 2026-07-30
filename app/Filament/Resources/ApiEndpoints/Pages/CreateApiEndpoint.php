@@ -2,11 +2,14 @@
 
 namespace App\Filament\Resources\ApiEndpoints\Pages;
 
+use App\Filament\Concerns\ResolvesEndpointCategoryGroup;
 use App\Filament\Resources\ApiEndpoints\ApiEndpointResource;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateApiEndpoint extends CreateRecord
 {
+    use ResolvesEndpointCategoryGroup;
+
     protected static string $resource = ApiEndpointResource::class;
 
     /**
@@ -15,6 +18,7 @@ class CreateApiEndpoint extends CreateRecord
      */
     protected function mutateFormDataBeforeCreate(array $data): array
     {
+        $data = $this->resolveGroupFromCategory($data);
         $data['created_by'] = auth()->id();
         $data['updated_by'] = auth()->id();
 

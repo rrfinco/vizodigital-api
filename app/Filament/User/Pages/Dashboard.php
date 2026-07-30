@@ -13,7 +13,7 @@ class Dashboard extends BaseDashboard
 
     protected static string|UnitEnum|null $navigationGroup = 'Workspace';
 
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $navigationLabel = 'Dashboard';
 

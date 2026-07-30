@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Auth\ClientCredentialController;
 use App\Http\Controllers\Api\V1\Auth\TokenController;
+use App\Http\Controllers\Api\V1\RechargeController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
@@ -18,5 +19,17 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::delete('/auth/token', [TokenController::class, 'destroy'])->name('auth.token.destroy');
         Route::post('/auth/credentials/check', [ClientCredentialController::class, 'check'])
             ->name('auth.credentials.check');
+
+        Route::post('/recharge', [RechargeController::class, 'store'])
+            ->name('recharge');
+
+        Route::post('/payment/create', [\App\Http\Controllers\Api\V1\PaymentController::class, 'store'])
+            ->name('payment.create');
+
+        Route::post('/bill-payment/credit-card/bill-fetch', [\App\Http\Controllers\Api\V1\CreditCardBillPaymentController::class, 'fetch'])
+            ->name('bill-payment.credit-card.fetch');
+
+        Route::post('/bill-payment/credit-card/bill-pay', [\App\Http\Controllers\Api\V1\CreditCardBillPaymentController::class, 'pay'])
+            ->name('bill-payment.credit-card.pay');
     });
 });

@@ -38,7 +38,11 @@ Route::post('/onboarding/kyc/{token}', [KycController::class, 'store'])->name('o
 Route::middleware('auth')->group(function (): void {
     Route::post('/logout', [LoginController::class, 'destroy'])->name('logout');
     Route::get('/profile', ProfileController::class)->name('profile');
+    Route::post('/payment/initiate', [\App\Http\Controllers\Web\Payment\PaymentController::class, 'initiate'])->name('payment.initiate');
+    Route::get('/payment/redirect', [\App\Http\Controllers\Web\Payment\PaymentController::class, 'callback'])->name('payment.redirect');
 });
+
+Route::post('/payment/webhook', [\App\Http\Controllers\Web\Payment\PaymentController::class, 'webhook'])->name('payment.webhook');
 
 Route::prefix('docs')->name('docs.')->middleware(SetPortalContext::class)->group(function (): void {
     Route::get('/', OverviewController::class)->name('overview');

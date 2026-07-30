@@ -32,6 +32,8 @@ class ChangelogEntryResource extends Resource
 
     protected static ?string $navigationLabel = 'Changelog';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function form(Schema $schema): Schema
     {
         return ChangelogEntryForm::configure($schema);

@@ -18,6 +18,8 @@ enum Permission: string
     case UsersManage = 'users.manage';
     case RolesManage = 'roles.manage';
     case SettingsManage = 'settings.manage';
+    case PlansManage = 'plans.manage';
+    case DepositsManage = 'deposits.manage';
 
     case ApiKeysManage = 'api-keys.manage';
     case KycManage = 'kyc.manage';
@@ -46,6 +48,8 @@ enum Permission: string
             self::UsersManage,
             self::RolesManage,
             self::SettingsManage,
+            self::PlansManage,
+            self::DepositsManage,
             self::ApiKeysManage,
             self::KycManage,
             self::AnalyticsView,

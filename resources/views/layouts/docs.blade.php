@@ -13,14 +13,16 @@
             ? $portalEnvironment->slug->value
             : $portalEnvironment?->slug;
         $currentVersionSlug = $portalVersion?->slug;
+        $portalSettings = app(\App\Services\Portal\PortalSettings::class);
+        $baseUrl = $portalEnvironment?->base_url ?: config('app.url');
     @endphp
-    <div class="flex min-h-screen flex-col" x-data="{ sidebarOpen: false }">
+    <div class="docs-shell flex min-h-screen flex-col bg-[#f4f6f9] dark:bg-slate-950" x-data="{ sidebarOpen: false }">
         {{-- Top navbar --}}
-        <header class="sticky top-0 z-40 border-b border-portal-border bg-white/90 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
-            <div class="flex h-14 items-center gap-3 px-4 lg:px-6">
+        <header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/95">
+            <div class="flex h-16 items-center gap-3 px-4 lg:px-8">
                 <button
                     type="button"
-                    class="rounded-2xl border border-portal-border p-2 text-slate-600 lg:hidden dark:border-slate-700 dark:text-slate-300"
+                    class="rounded-lg border border-slate-200 p-2 text-slate-600 lg:hidden dark:border-slate-700 dark:text-slate-300"
                     @click="sidebarOpen = !sidebarOpen"
                     aria-label="Toggle sidebar"
                 >
@@ -29,23 +31,39 @@
                     </svg>
                 </button>
 
-                <a href="{{ route('landing') }}" class="flex items-center gap-2">
-                    <span class="flex h-8 w-8 items-center justify-center rounded-2xl bg-primary-600 text-xs font-semibold text-white">
-                        {{ strtoupper(substr(app(\App\Services\Portal\PortalSettings::class)->logoText(), 0, 1)) }}
+                <a href="{{ route('docs.overview') }}" class="flex min-w-0 items-center gap-3">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0b1f3a] text-white shadow-sm dark:bg-sky-600">
+                        <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7.5h.01M12 7.5h.01M16.5 7.5h.01M7.5 12h.01M12 12h.01M16.5 12h.01M7.5 16.5h.01M12 16.5h.01M16.5 16.5h.01" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 8l4 4 4-4M8 16l4-4 4 4" />
+                        </svg>
                     </span>
-                    <span class="hidden text-sm font-semibold sm:inline">{{ app(\App\Services\Portal\PortalSettings::class)->logoText() }}</span>
+                    <span class="min-w-0">
+                        <span class="block truncate text-base font-semibold tracking-tight text-[#0b1f3a] dark:text-white">API Documentation</span>
+                        <span class="hidden truncate text-xs text-slate-500 sm:block">{{ $portalSettings->tagline() ?: 'Complete reference for integrating Authentication, Recharge & Bill Payment APIs.' }}</span>
+                    </span>
                 </a>
 
-                <div class="mx-auto hidden w-full max-w-md md:block">
+                <div class="mx-auto hidden w-full max-w-md lg:block">
                     <x-docs.search :version-slug="$currentVersionSlug" />
                 </div>
 
                 <div class="ml-auto flex items-center gap-2">
+                    @if ($baseUrl)
+                        <div class="hidden items-center gap-2 rounded-xl border border-sky-100 bg-sky-50 px-3 py-2 text-xs font-medium text-sky-900 sm:inline-flex dark:border-sky-900/40 dark:bg-sky-950/40 dark:text-sky-100">
+                            <svg class="h-3.5 w-3.5 shrink-0 text-sky-600" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" />
+                            </svg>
+                            <span class="truncate">Base URL: <span class="font-mono">{{ rtrim($baseUrl, '/') }}/</span></span>
+                        </div>
+                    @endif
+
                     @if (($portalEnvironments ?? collect())->isNotEmpty())
                         <label class="sr-only" for="portal-env-switcher">Environment</label>
                         <select
                             id="portal-env-switcher"
-                            class="hidden rounded-2xl border border-portal-border bg-white px-3 py-1.5 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 sm:inline-flex"
+                            class="hidden rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 md:inline-flex dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                             onchange="window.location.href = this.value"
                         >
                             @foreach ($portalEnvironments as $environment)
@@ -66,7 +84,7 @@
                         <label class="sr-only" for="portal-version-switcher">Version</label>
                         <select
                             id="portal-version-switcher"
-                            class="hidden rounded-2xl border border-portal-border bg-white px-3 py-1.5 text-xs text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 sm:inline-flex"
+                            class="hidden rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 md:inline-flex dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
                             onchange="window.location.href = this.value"
                         >
                             @foreach ($portalVersions as $version)
@@ -81,27 +99,17 @@
                     @endif
 
                     <x-ui.theme-toggle />
-                    <button type="button" class="rounded-2xl border border-portal-border p-2 text-slate-400 dark:border-slate-700" disabled title="Notifications — later">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-                        </svg>
-                    </button>
+
                     @auth
                         <a
-                            href="{{ route('profile') }}"
-                            class="flex h-8 w-8 items-center justify-center rounded-2xl bg-primary-50 text-xs font-semibold text-primary-700 dark:bg-primary-950/50 dark:text-primary-300"
+                            href="{{ url('/user') }}"
+                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0b1f3a] text-xs font-semibold text-white dark:bg-sky-600"
                             title="{{ auth()->user()->name }}"
                         >
                             {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
                         </a>
-                        <form method="POST" action="{{ route('logout') }}" class="hidden sm:block">
-                            @csrf
-                            <button type="submit" class="rounded-2xl border border-portal-border px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900">
-                                Log out
-                            </button>
-                        </form>
                     @else
-                        <a href="{{ route('login') }}" class="rounded-2xl border border-portal-border px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-900">
+                        <a href="{{ route('login') }}" class="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-900">
                             Sign in
                         </a>
                     @endauth
@@ -121,13 +129,12 @@
 
             {{-- Left sidebar --}}
             <aside
-                class="fixed inset-y-0 left-0 z-30 mt-14 w-64 shrink-0 overflow-y-auto border-r border-portal-border bg-white px-3 py-4 transition-transform dark:border-slate-800 dark:bg-slate-950 lg:static lg:mt-0 lg:translate-x-0"
+                class="fixed inset-y-0 left-0 z-30 mt-16 w-64 shrink-0 overflow-y-auto border-r border-slate-200/80 bg-white px-3 py-5 transition-transform dark:border-slate-800 dark:bg-slate-950 lg:static lg:mt-0 lg:translate-x-0"
                 :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
             >
-                <p class="mb-3 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Documentation</p>
-                <nav class="space-y-0.5">
+                <nav class="space-y-5">
                     @if (($portalNav ?? collect())->isEmpty())
-                        <div class="rounded-2xl border border-dashed border-portal-border p-3 text-xs text-slate-500 dark:border-slate-700">
+                        <div class="rounded-xl border border-dashed border-slate-200 p-3 text-xs text-slate-500 dark:border-slate-700">
                             No navigation yet. Publish content or add items in Admin → Navigation.
                         </div>
                     @else
@@ -136,62 +143,22 @@
                 </nav>
             </aside>
 
-            {{-- Main + right --}}
-            <div class="flex min-w-0 flex-1">
+            {{-- Main --}}
+            <div class="flex min-w-0 flex-1 flex-col">
                 <main class="min-w-0 flex-1 px-4 py-8 sm:px-6 lg:px-10">
                     @yield('content')
                 </main>
 
-                <aside class="hidden w-56 shrink-0 border-l border-portal-border px-4 py-8 xl:block dark:border-slate-800">
-                    <p class="mb-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">On this page</p>
-                    @hasSection('toc')
-                        @yield('toc')
-                    @else
-                        <p class="text-sm text-slate-400">Table of contents appears when content is published.</p>
-                    @endif
-
-                    <div class="mt-8">
-                        <p class="mb-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Related APIs</p>
-                        @hasSection('related')
-                            @yield('related')
-                        @else
-                            <p class="text-sm text-slate-400">Related endpoints appear on API pages.</p>
-                        @endif
+                <footer class="mt-auto border-t border-slate-200/80 bg-white px-4 py-5 sm:px-6 lg:px-10 dark:border-slate-800 dark:bg-slate-950">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p class="text-xs text-slate-500">
+                            Copyright © {{ date('Y') }} {{ $portalSettings->name() }}. All rights reserved.
+                        </p>
+                        <div class="flex items-center gap-3 text-slate-400">
+                            <span class="text-[11px] uppercase tracking-wider">Developer portal</span>
+                        </div>
                     </div>
-
-                    <div class="mt-8">
-                        <p class="mb-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Environment</p>
-                        @if ($portalEnvironment)
-                            <p class="text-sm font-medium text-slate-700 dark:text-slate-200">
-                                {{ $portalEnvironment->label ?: $portalEnvironment->name }}
-                            </p>
-                            <p class="mt-1 break-all font-mono text-xs text-slate-500">
-                                {{ $portalEnvironment->base_url }}
-                            </p>
-                            <ul class="mt-3 space-y-1.5 text-sm">
-                                @foreach ($portalEnvironments as $environment)
-                                    @php
-                                        $slug = $environment->slug instanceof \BackedEnum ? $environment->slug->value : $environment->slug;
-                                    @endphp
-                                    <li>
-                                        <a
-                                            href="{{ $portalEnvironmentUrls[$slug] ?? request()->fullUrlWithQuery(['env' => $slug]) }}"
-                                            @class([
-                                                'hover:text-primary-600 dark:hover:text-primary-400',
-                                                'font-medium text-primary-700 dark:text-primary-300' => $slug === $currentEnvSlug,
-                                                'text-slate-500' => $slug !== $currentEnvSlug,
-                                            ])
-                                        >
-                                            {{ $environment->badge ?: $environment->name }}
-                                        </a>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        @else
-                            <p class="text-sm text-slate-400">No environments configured.</p>
-                        @endif
-                    </div>
-                </aside>
+                </footer>
             </div>
         </div>
     </div>

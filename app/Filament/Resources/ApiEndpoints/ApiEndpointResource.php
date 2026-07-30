@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\ApiEndpoints;
 
 use App\Filament\Concerns\HasCmsResourceAuthorization;
-use App\Filament\RelationManagers\BaseUrlsRelationManager;
 use App\Filament\Resources\ApiEndpoints\Pages\CreateApiEndpoint;
 use App\Filament\Resources\ApiEndpoints\Pages\EditApiEndpoint;
 use App\Filament\Resources\ApiEndpoints\Pages\ListApiEndpoints;
@@ -11,11 +10,9 @@ use App\Filament\Resources\ApiEndpoints\RelationManagers\CodeSamplesRelationMana
 use App\Filament\Resources\ApiEndpoints\RelationManagers\ErrorsRelationManager;
 use App\Filament\Resources\ApiEndpoints\RelationManagers\ExamplesRelationManager;
 use App\Filament\Resources\ApiEndpoints\RelationManagers\HeadersRelationManager;
-use App\Filament\Resources\ApiEndpoints\RelationManagers\NotesRelationManager;
 use App\Filament\Resources\ApiEndpoints\RelationManagers\ParametersRelationManager;
 use App\Filament\Resources\ApiEndpoints\RelationManagers\RequestBodiesRelationManager;
 use App\Filament\Resources\ApiEndpoints\RelationManagers\ResponsesRelationManager;
-use App\Filament\Resources\ApiEndpoints\RelationManagers\SectionsRelationManager;
 use App\Filament\Resources\ApiEndpoints\Schemas\ApiEndpointForm;
 use App\Filament\Resources\ApiEndpoints\Tables\ApiEndpointsTable;
 use App\Models\ApiEndpoint;
@@ -55,16 +52,13 @@ class ApiEndpointResource extends Resource
     public static function getRelations(): array
     {
         return [
-            SectionsRelationManager::class,
             HeadersRelationManager::class,
             ParametersRelationManager::class,
             RequestBodiesRelationManager::class,
             ResponsesRelationManager::class,
             ErrorsRelationManager::class,
-            NotesRelationManager::class,
             ExamplesRelationManager::class,
             CodeSamplesRelationManager::class,
-            BaseUrlsRelationManager::class,
         ];
     }
 

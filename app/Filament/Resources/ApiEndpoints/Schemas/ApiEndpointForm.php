@@ -4,9 +4,8 @@ namespace App\Filament\Resources\ApiEndpoints\Schemas;
 
 use App\Enums\HttpMethod;
 use App\Filament\Support\PublishStatusField;
-use App\Models\ApiGroup;
+use App\Models\ApiCategory;
 use App\Models\ApiVersion;
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -30,27 +29,27 @@ class ApiEndpointForm
                             ->preload()
                             ->required()
                             ->live()
-                            ->default(fn () => ApiVersion::query()->where('is_default', true)->value('id')),
-                        Select::make('api_group_id')
-                            ->label('Group')
+                            ->default(fn () => ApiVersion::query()->where('is_default', true)->value('id'))
+                            ->afterStateUpdated(fn (callable $set) => $set('api_category_id', null)),
+                        Select::make('api_category_id')
+                            ->label('Category')
                             ->options(function (callable $get): array {
                                 $versionId = $get('api_version_id');
 
-                                return ApiGroup::query()
-                                    ->when(
-                                        $versionId,
-                                        fn ($q) => $q->whereHas('category', fn ($cq) => $cq->where('api_version_id', $versionId))
-                                    )
-                                    ->with('category')
+                                if (! $versionId) {
+                                    return [];
+                                }
+
+                                return ApiCategory::query()
+                                    ->where('api_version_id', $versionId)
+                                    ->orderBy('sort_order')
                                     ->orderBy('name')
-                                    ->get()
-                                    ->mapWithKeys(fn (ApiGroup $group) => [
-                                        $group->id => ($group->category?->name ? $group->category->name.' / ' : '').$group->name,
-                                    ])
+                                    ->pluck('name', 'id')
                                     ->all();
                             })
                             ->searchable()
-                            ->required(),
+                            ->required()
+                            ->dehydrated(false),
                         TextInput::make('name')
                             ->required()
                             ->maxLength(255)
@@ -69,7 +68,7 @@ class ApiEndpointForm
                             ->default(HttpMethod::Get->value),
                         TextInput::make('path')
                             ->required()
-                            ->placeholder('/v1/resource')
+                            ->placeholder('/v1/flight/search')
                             ->maxLength(255),
                         TextInput::make('summary')
                             ->maxLength(255)
@@ -78,15 +77,10 @@ class ApiEndpointForm
                             ->label('Description')
                             ->columnSpanFull(),
                         PublishStatusField::make(),
-                        TextInput::make('permission_name')
-                            ->placeholder('e.g. payments.create'),
-                        TextInput::make('rate_limit')
-                            ->placeholder('e.g. 60/minute'),
                         TextInput::make('sort_order')
                             ->numeric()
                             ->default(0)
                             ->required(),
-                        DateTimePicker::make('published_at'),
                     ]),
             ]);
     }

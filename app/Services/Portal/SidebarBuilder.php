@@ -30,24 +30,147 @@ class SidebarBuilder
         $version ??= $this->portal->version();
         $nodes = collect();
 
-        $cmsItems = $this->navigation->treeForVersion($version);
-        foreach ($cmsItems as $item) {
-            $nodes->push($this->mapItem($item, $version));
+        $gettingStarted = $this->gettingStartedNodes($version);
+        if ($gettingStarted->isNotEmpty()) {
+            $nodes->push(new NavigationNodeDto(
+                label: 'Getting Started',
+                href: null,
+                active: $gettingStarted->contains(fn (NavigationNodeDto $n) => $n->active || $n->children->contains(fn ($c) => $c->active)),
+                children: $gettingStarted,
+            ));
+        }
+
+        $endpoints = $this->endpointNodes($version);
+        if ($endpoints->isNotEmpty()) {
+            $nodes->push(new NavigationNodeDto(
+                label: 'Endpoints',
+                href: null,
+                active: $endpoints->contains(fn (NavigationNodeDto $n) => $n->active),
+                children: $endpoints,
+            ));
+        }
+
+        $reference = $this->referenceNodes($version);
+        if ($reference->isNotEmpty()) {
+            $nodes->push(new NavigationNodeDto(
+                label: 'Reference',
+                href: null,
+                active: $reference->contains(fn (NavigationNodeDto $n) => $n->active),
+                children: $reference,
+            ));
         }
 
         if ($nodes->isEmpty()) {
-            $nodes = $this->fallbackFromConfig();
+            return $this->fallbackFromConfig();
         }
 
-        $apiTree = $this->apiReferenceTree($version);
-        if ($apiTree->isNotEmpty()) {
+        return $nodes;
+    }
+
+    /**
+     * @return Collection<int, NavigationNodeDto>
+     */
+    private function gettingStartedNodes(?ApiVersion $version): Collection
+    {
+        $nodes = collect();
+        $overviewHref = route('docs.overview');
+
+        $nodes->push(new NavigationNodeDto(
+            label: 'Overview',
+            href: $overviewHref,
+            active: request()->routeIs('docs.overview'),
+        ));
+
+        $cmsItems = $this->navigation->treeForVersion($version);
+        foreach ($cmsItems as $item) {
+            $mapped = $this->mapItem($item, $version);
+
+            // Avoid duplicate Overview — CMS foundation also seeds docs.overview.
+            if ($this->sameDocsUrl($mapped->href, $overviewHref)) {
+                continue;
+            }
+
+            $nodes->push($mapped);
+        }
+
+        return $nodes->values();
+    }
+
+    /**
+     * Flatten published endpoints under ENDPOINTS (InsPay-style).
+     *
+     * @return Collection<int, NavigationNodeDto>
+     */
+    private function endpointNodes(?ApiVersion $version): Collection
+    {
+        if (! $version) {
+            return collect();
+        }
+
+        $categories = $this->documentation->publishedCategoryTree($version->slug);
+
+        return $categories
+            ->flatMap(fn (ApiCategory $category) => $category->groups
+                ->flatMap(fn (ApiGroup $group) => $group->endpoints)
+                ->sortBy('sort_order')
+                ->values()
+                ->map(function (ApiEndpoint $endpoint) use ($version): NavigationNodeDto {
+                    $href = route('docs.endpoints.show', [
+                        'version' => $version->slug,
+                        'endpoint' => $endpoint->slug,
+                    ]);
+
+                    return new NavigationNodeDto(
+                        label: $endpoint->name,
+                        href: $href,
+                        active: $this->isActive($href),
+                        badge: $endpoint->method?->value,
+                    );
+                }))
+            ->values();
+    }
+
+    /**
+     * @return Collection<int, NavigationNodeDto>
+     */
+    private function referenceNodes(?ApiVersion $version): Collection
+    {
+        if (! $version) {
+            return collect();
+        }
+
+        $nodes = collect();
+
+        $nodes->push(new NavigationNodeDto(
+            label: 'API Explorer',
+            href: route('docs.explorer', ['version' => $version->slug]),
+            active: request()->routeIs('docs.explorer', 'docs.categories.*', 'docs.groups.*'),
+        ));
+
+        if (\Illuminate\Support\Facades\Route::has('docs.faqs.index')) {
+            $href = route('docs.faqs.index', ['version' => $version->slug]);
             $nodes->push(new NavigationNodeDto(
-                label: 'API Reference',
-                href: $version
-                    ? route('docs.explorer', ['version' => $version->slug])
-                    : null,
-                active: request()->routeIs('docs.explorer', 'docs.categories.*', 'docs.groups.*', 'docs.endpoints.*'),
-                children: $apiTree,
+                label: 'FAQs',
+                href: $href,
+                active: $this->isActive($href),
+            ));
+        }
+
+        if (\Illuminate\Support\Facades\Route::has('docs.changelog.index')) {
+            $href = route('docs.changelog.index', ['version' => $version->slug]);
+            $nodes->push(new NavigationNodeDto(
+                label: 'Changelog',
+                href: $href,
+                active: request()->routeIs('docs.changelog.*'),
+            ));
+        }
+
+        if (\Illuminate\Support\Facades\Route::has('docs.sdk.index')) {
+            $href = route('docs.sdk.index', ['version' => $version->slug]);
+            $nodes->push(new NavigationNodeDto(
+                label: 'SDK',
+                href: $href,
+                active: $this->isActive($href),
             ));
         }
 
@@ -69,60 +192,6 @@ class SidebarBuilder
             external: $item->target_type?->value === 'url' && filled($item->url) && Str::startsWith($item->url, ['http://', 'https://']),
             children: $children,
         );
-    }
-
-    /**
-     * @return Collection<int, NavigationNodeDto>
-     */
-    private function apiReferenceTree(?ApiVersion $version): Collection
-    {
-        if (! $version) {
-            return collect();
-        }
-
-        $categories = $this->documentation->publishedCategoryTree($version->slug);
-
-        return $categories->map(function (ApiCategory $category) use ($version): NavigationNodeDto {
-            $categoryHref = route('docs.categories.show', [
-                'version' => $version->slug,
-                'category' => $category->slug,
-            ]);
-
-            $groups = $category->groups->map(function (ApiGroup $group) use ($version): NavigationNodeDto {
-                $groupHref = route('docs.groups.show', [
-                    'version' => $version->slug,
-                    'group' => $group->slug,
-                ]);
-
-                $endpoints = $group->endpoints->map(function (ApiEndpoint $endpoint) use ($version): NavigationNodeDto {
-                    $href = route('docs.endpoints.show', [
-                        'version' => $version->slug,
-                        'endpoint' => $endpoint->slug,
-                    ]);
-
-                    return new NavigationNodeDto(
-                        label: $endpoint->name,
-                        href: $href,
-                        active: $this->isActive($href),
-                        badge: $endpoint->method?->value,
-                    );
-                });
-
-                return new NavigationNodeDto(
-                    label: $group->name,
-                    href: $groupHref,
-                    active: $this->isActive($groupHref) || $endpoints->contains(fn (NavigationNodeDto $n) => $n->active),
-                    children: $endpoints,
-                );
-            });
-
-            return new NavigationNodeDto(
-                label: $category->name,
-                href: $categoryHref,
-                active: $this->isActive($categoryHref) || $groups->contains(fn (NavigationNodeDto $n) => $n->active),
-                children: $groups,
-            );
-        });
     }
 
     /**
@@ -150,9 +219,29 @@ class SidebarBuilder
             return false;
         }
 
-        $current = request()->url();
-        $target = Str::before($href, '?');
+        $current = rtrim(request()->url(), '/');
+        $target = rtrim(Str::before($href, '?'), '/');
 
-        return $current === $target || Str::startsWith($current, rtrim($target, '/').'/');
+        if ($current === $target) {
+            return true;
+        }
+
+        // Never treat the docs root (/docs) as a prefix match — it would mark Overview
+        // active on every nested docs page.
+        $overview = rtrim(route('docs.overview'), '/');
+        if ($target === $overview) {
+            return false;
+        }
+
+        return Str::startsWith($current, $target.'/');
+    }
+
+    private function sameDocsUrl(?string $left, ?string $right): bool
+    {
+        if (! $left || ! $right) {
+            return false;
+        }
+
+        return rtrim(Str::before($left, '?'), '/') === rtrim(Str::before($right, '?'), '/');
     }
 }

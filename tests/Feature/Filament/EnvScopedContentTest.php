@@ -91,7 +91,8 @@ class EnvScopedContentTest extends TestCase
 
         $this->assertContains(ExamplesRelationManager::class, $relations);
         $this->assertContains(CodeSamplesRelationManager::class, $relations);
-        $this->assertContains(BaseUrlsRelationManager::class, $relations);
+        $this->assertFalse(PostmanCollectionResource::shouldRegisterNavigation());
+        $this->assertFalse(SdkPackageResource::shouldRegisterNavigation());
         $this->assertSame('Postman', PostmanCollectionResource::getNavigationLabel());
         $this->assertSame('SDK packages', SdkPackageResource::getNavigationLabel());
     }

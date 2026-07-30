@@ -73,6 +73,15 @@ class HardeningTest extends TestCase
                 'name' => 'Acme Docs',
                 'tagline' => 'Build faster',
                 'logo_text' => 'Acme',
+                'roundpay_api_url' => 'https://api.roundpay.net/API/TransactionAPI',
+                'roundpay_user_id' => 'test_user',
+                'roundpay_token' => 'test_token',
+                'roundpay_route_type' => '3',
+                'roundpay_is_real' => '1',
+                'roundpay_format' => '1',
+                'rrfinco_account' => 'test_account',
+                'rrfinco_merchant_id' => 'test_merchant',
+                'rrfinco_api_token' => 'test_api_token',
             ])
             ->call('save')
             ->assertHasNoFormErrors();

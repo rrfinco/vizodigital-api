@@ -22,15 +22,15 @@
     --color-primary-800: #1e40af;
     --color-primary-900: #1e3a8a;
 
-    --color-portal-dark: #0f172a;
+    --color-portal-dark: #0b1f3a;
     --color-portal-success: #22c55e;
     --color-portal-warning: #f59e0b;
     --color-portal-danger: #ef4444;
     --color-portal-border: #e5e7eb;
-    --color-portal-bg: #f8fafc;
+    --color-portal-bg: #f4f6f9;
     --color-portal-card: #ffffff;
 
-    --radius-portal: 1rem;
+    --radius-portal: 0.75rem;
     --shadow-card: 0 1px 2px 0 rgb(15 23 42 / 0.04), 0 1px 3px 0 rgb(15 23 42 / 0.06);
 }
 
@@ -111,5 +111,21 @@
 
     .portal-prose :where(pre code) {
         @apply bg-transparent p-0 text-inherit;
+    }
+
+    .docs-shell .portal-prose :where(pre) {
+        @apply rounded-xl bg-[#0b1f3a];
+    }
+
+    .docs-response-grid {
+        @apply grid gap-3 sm:grid-cols-2;
+    }
+
+    .docs-response-success {
+        @apply overflow-hidden rounded-xl border border-emerald-100 bg-white dark:border-emerald-900/40 dark:bg-slate-950;
+    }
+
+    .docs-response-failure {
+        @apply overflow-hidden rounded-xl border border-rose-100 bg-white dark:border-rose-900/40 dark:bg-slate-950;
     }
 }
