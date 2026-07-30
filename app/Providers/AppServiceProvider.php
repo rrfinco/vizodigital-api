@@ -13,7 +13,9 @@ use App\Observers\SearchableObserver;
 use App\Policies\DocumentationPolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -26,6 +28,13 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Relative Vite URLs avoid http/https mixed-content behind reverse proxies.
+        Vite::createAssetPathsUsing(fn (string $path, ?bool $secure = null): string => '/'.ltrim($path, '/'));
+
+        if (str_starts_with((string) config('app.url'), 'https://')) {
+            URL::forceScheme('https');
+        }
+
         Gate::policy(User::class, UserPolicy::class);
 
         Gate::define('docs.view_admin', [DocumentationPolicy::class, 'viewAdmin']);
