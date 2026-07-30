@@ -1,0 +1,8 @@
+# Pin Node for Vite 7 + Tailwind Oxide (requires Node 20.19+ / 22.12+).
+# Nixpacks PHP provider defaults to Node 18, which breaks `npm run build`.
+[variables]
+NIXPACKS_NODE_VERSION = "22"
+
+# Run Laravel storage/cache sync on every container start (no migrations).
+[start]
+cmd = "bash /app/scripts/post-deploy.sh && node /assets/scripts/prestart.mjs /assets/nginx.template.conf /nginx.conf && (php-fpm -y /assets/php-fpm.conf & nginx -c /nginx.conf)"
