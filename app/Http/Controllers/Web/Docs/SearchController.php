@@ -50,7 +50,7 @@ class SearchController extends Controller
                     'title' => $hit->title,
                     'type' => $hit->type,
                     'type_label' => $type?->label() ?? Str::headline($hit->type),
-                    'url' => $hit->url,
+                    'url' => $this->publicUrl($hit->url),
                     'snippet' => $this->snippet($hit->body, $query),
                 ];
             })
@@ -61,6 +61,31 @@ class SearchController extends Controller
             'version' => $versionSlug,
             'results' => $results,
         ]);
+    }
+
+    /**
+     * Normalize legacy absolute search URLs (often indexed with local APP_URL).
+     */
+    private function publicUrl(?string $url): ?string
+    {
+        if (! filled($url)) {
+            return null;
+        }
+
+        if (str_starts_with($url, '/')) {
+            return $url;
+        }
+
+        $parts = parse_url($url);
+        if ($parts === false) {
+            return $url;
+        }
+
+        $path = $parts['path'] ?? '/';
+        $query = isset($parts['query']) ? '?'.$parts['query'] : '';
+        $fragment = isset($parts['fragment']) ? '#'.$parts['fragment'] : '';
+
+        return $path.$query.$fragment;
     }
 
     private function snippet(?string $body, string $query): ?string

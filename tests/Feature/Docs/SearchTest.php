@@ -179,6 +179,33 @@ class SearchTest extends TestCase
             ->assertSee('docsSearch');
     }
 
+    public function test_search_results_use_host_agnostic_paths(): void
+    {
+        $this->actingAs($this->admin);
+        app(PublishEndpoint::class)($this->endpoint);
+
+        // Simulate a row indexed under a different APP_URL (common after DB import / wrong env).
+        SearchIndex::query()
+            ->where('searchable_type', ApiEndpoint::class)
+            ->where('searchable_id', $this->endpoint->id)
+            ->update(['url' => 'http://localhost:9021/docs/v1/endpoints/get-token']);
+
+        $this->getJson(route('docs.search', ['q' => 'token', 'version' => 'v1']))
+            ->assertOk()
+            ->assertJsonFragment([
+                'title' => 'Get Token',
+                'url' => '/docs/v1/endpoints/get-token',
+            ]);
+
+        $this->artisan('search:reindex')->assertSuccessful();
+
+        $this->assertDatabaseHas('search_index', [
+            'searchable_type' => ApiEndpoint::class,
+            'searchable_id' => $this->endpoint->id,
+            'url' => '/docs/v1/endpoints/get-token',
+        ]);
+    }
+
     public function test_reindex_command_rebuilds_index(): void
     {
         SearchIndex::query()->delete();

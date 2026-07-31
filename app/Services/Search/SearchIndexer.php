@@ -110,7 +110,7 @@ class SearchIndexer
             ]),
             'status' => $status->value,
             'url' => $versionSlug
-                ? route('docs.endpoints.show', [
+                ? $this->docsPath('docs.endpoints.show', [
                     'version' => $versionSlug,
                     'endpoint' => $endpoint->slug,
                 ])
@@ -140,7 +140,7 @@ class SearchIndexer
             ]),
             'status' => $status->value,
             'url' => $versionSlug
-                ? route('docs.pages.show', [
+                ? $this->docsPath('docs.pages.show', [
                     'version' => $versionSlug,
                     'page' => $page->slug,
                 ])
@@ -167,7 +167,7 @@ class SearchIndexer
             'keywords' => $category->slug,
             'status' => $status->value,
             'url' => $versionSlug
-                ? route('docs.categories.show', [
+                ? $this->docsPath('docs.categories.show', [
                     'version' => $versionSlug,
                     'category' => $category->slug,
                 ])
@@ -194,7 +194,7 @@ class SearchIndexer
             'keywords' => $group->slug,
             'status' => $status->value,
             'url' => $versionSlug
-                ? route('docs.groups.show', [
+                ? $this->docsPath('docs.groups.show', [
                     'version' => $versionSlug,
                     'group' => $group->slug,
                 ])
@@ -222,7 +222,7 @@ class SearchIndexer
             'keywords' => $faq->category,
             'status' => $status->value,
             'url' => $versionSlug
-                ? route('docs.faqs.index', ['version' => $versionSlug]).'#faq-'.$faq->id
+                ? $this->docsPath('docs.faqs.index', ['version' => $versionSlug], 'faq-'.$faq->id)
                 : null,
         ];
     }
@@ -246,12 +246,29 @@ class SearchIndexer
             'keywords' => $entry->slug,
             'status' => $status->value,
             'url' => $versionSlug
-                ? route('docs.changelog.show', [
+                ? $this->docsPath('docs.changelog.show', [
                     'version' => $versionSlug,
                     'entry' => $entry->slug,
                 ])
                 : null,
         ];
+    }
+
+    /**
+     * Store host-agnostic paths so search works across local / staging / production.
+     *
+     * @param  array<string, mixed>  $parameters
+     */
+    private function docsPath(string $route, array $parameters = [], ?string $fragment = null): string
+    {
+        $parts = parse_url(route($route, $parameters));
+        $path = $parts['path'] ?? '/';
+        $query = isset($parts['query']) ? '?'.$parts['query'] : '';
+        $hash = $fragment !== null && $fragment !== ''
+            ? '#'.$fragment
+            : (isset($parts['fragment']) ? '#'.$parts['fragment'] : '');
+
+        return $path.$query.$hash;
     }
 
     private function defaultVersionSlug(): ?string
