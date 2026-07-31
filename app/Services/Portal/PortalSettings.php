@@ -37,6 +37,21 @@ class PortalSettings
         return (string) ($this->branding()['logo_text'] ?? config('portal.brand.logo_text'));
     }
 
+    public function logoPath(): string
+    {
+        return (string) config('portal.brand.logo', 'images/brand/vizo-logo.jpg');
+    }
+
+    public function logoUrl(): string
+    {
+        return asset($this->logoPath());
+    }
+
+    public function logoHeight(): string
+    {
+        return (string) config('portal.brand.logo_height', '2rem');
+    }
+
     /**
      * @return array{name: mixed, tagline: mixed, logo_text: mixed}
      */

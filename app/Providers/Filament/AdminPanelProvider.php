@@ -3,7 +3,6 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Concerns\ConfiguresCrmPanelLayout;
-use App\Services\Portal\PortalSettings;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -19,6 +18,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -32,7 +32,15 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->brandName(fn (): string => app(PortalSettings::class)->logoText())
+            ->brandName('ADMIN portal')
+            ->brandLogo(fn (): HtmlString => new HtmlString(
+                view('filament.hooks.brand-mark', [
+                    'subtitle' => 'ADMIN portal',
+                    'logoHeight' => '1.75rem',
+                ])->render()
+            ))
+            ->brandLogoHeight('auto')
+            ->favicon(fn (): string => asset('images/brand/vizo-icon.jpg'))
             ->colors([
                 'primary' => Color::Blue,
             ])
@@ -64,6 +72,6 @@ class AdminPanelProvider extends PanelProvider
                 Authenticate::class,
             ]);
 
-        return $this->configureCrmLayout($panel, 'Admin CRM');
+        return $this->configureCrmLayout($panel, 'ADMIN portal');
     }
 }

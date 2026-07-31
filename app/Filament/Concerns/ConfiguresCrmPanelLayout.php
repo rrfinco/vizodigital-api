@@ -5,6 +5,8 @@ namespace App\Filament\Concerns;
 use Filament\Actions\Action;
 use Filament\Panel;
 use Filament\Support\Enums\Width;
+use Filament\Support\Icons\Heroicon;
+use Filament\View\PanelsIconAlias;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Contracts\View\View;
 
@@ -26,6 +28,12 @@ trait ConfiguresCrmPanelLayout
             ->collapsedSidebarWidth('4.5rem')
             ->topbar()
             ->userMenu()
+            ->icons([
+                PanelsIconAlias::SIDEBAR_COLLAPSE_BUTTON => Heroicon::OutlinedBars3,
+                PanelsIconAlias::SIDEBAR_COLLAPSE_BUTTON_RTL => Heroicon::OutlinedBars3,
+                PanelsIconAlias::SIDEBAR_EXPAND_BUTTON => Heroicon::OutlinedBars3,
+                PanelsIconAlias::SIDEBAR_EXPAND_BUTTON_RTL => Heroicon::OutlinedBars3,
+            ])
             ->userMenuItems([
                 // Use Filament's default logout action, but force a host-agnostic path
                 // so logout keeps working when APP_URL doesn't match the public host.
@@ -46,6 +54,10 @@ trait ConfiguresCrmPanelLayout
                 fn (): View => view('filament.hooks.topbar-context', [
                     'label' => $panelLabel,
                 ]),
+            )
+            ->renderHook(
+                PanelsRenderHook::TOPBAR_LOGO_AFTER,
+                fn (): View => view('filament.hooks.sidebar-toggle'),
             )
             ->renderHook(
                 PanelsRenderHook::FOOTER,

@@ -6,11 +6,12 @@
     <div class="flex min-h-screen flex-col justify-center bg-portal-bg px-4 py-12 dark:bg-slate-950">
         <div class="mx-auto w-full max-w-md">
             <div class="mb-8 text-center">
-                <a href="{{ route('landing') }}" class="inline-flex items-center gap-2.5">
-                    <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary-600 text-sm font-semibold text-white shadow-card">
-                        {{ strtoupper(substr(config('portal.brand.logo_text'), 0, 1)) }}
-                    </span>
-                    <span class="text-lg font-semibold tracking-tight">{{ config('portal.brand.logo_text') }}</span>
+                <a href="{{ route('landing') }}" class="inline-flex items-center justify-center">
+                    <img
+                        src="{{ asset(config('portal.brand.logo')) }}"
+                        alt="{{ config('portal.brand.logo_text') }}"
+                        class="h-10 w-auto object-contain"
+                    />
                 </a>
                 <h1 class="mt-6 text-2xl font-semibold tracking-tight text-portal-dark dark:text-white">Create developer account</h1>
                 <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">

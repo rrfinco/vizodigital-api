@@ -45,6 +45,48 @@
         box-shadow: var(--crm-shadow) !important;
     }
 
+    .fi-panel-user .fi-logo,
+    .fi-panel-admin .fi-logo {
+        height: auto !important;
+        max-height: none;
+    }
+
+    /* Keep logo alone on the left; hamburger lives before the user menu */
+    .fi-topbar-collapse-sidebar-btn-ctn {
+        display: none !important;
+    }
+
+    /* Hide Filament's default left mobile toggles — we use the right hamburger */
+    .fi-topbar-open-sidebar-btn,
+    .fi-topbar-close-sidebar-btn {
+        display: none !important;
+    }
+
+    /* Logo + hamburger on the left, with a small gap between them */
+    .fi-topbar-start {
+        display: flex !important;
+        flex: 0 1 auto;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 0.75rem;
+        min-width: 0;
+        margin-inline-end: 0.75rem;
+        width: auto;
+    }
+
+    .fi-topbar-start .fi-logo {
+        margin-inline-start: 0 !important;
+        flex-shrink: 0;
+    }
+
+    .crm-topbar-sidebar-toggle {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+        margin-inline-start: 0 !important;
+        order: 0;
+    }
+
     /* Smaller topbar chip text */
     .crm-topbar-chip {
         font-size: 0.625rem !important;
@@ -52,13 +94,6 @@
         padding: 0.2rem 0.55rem !important;
         font-weight: 500 !important;
         gap: 0.25rem !important;
-    }
-
-    /* Hide DevPortal brand on user panel */
-    .fi-panel-user .fi-logo,
-    .fi-panel-user .fi-topbar .fi-logo,
-    .fi-panel-user .fi-sidebar-header .fi-logo {
-        display: none !important;
     }
 
     .crm-topbar-nav {

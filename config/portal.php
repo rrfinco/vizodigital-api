@@ -26,7 +26,9 @@ return [
 
     'brand' => [
         'short' => env('PORTAL_BRAND_SHORT', 'API Portal'),
-        'logo_text' => env('PORTAL_LOGO_TEXT', 'DevPortal'),
+        'logo_text' => env('PORTAL_LOGO_TEXT', 'VIZO'),
+        'logo' => env('PORTAL_LOGO', 'images/brand/vizo-logo.jpg'),
+        'logo_height' => env('PORTAL_LOGO_HEIGHT', '2rem'),
     ],
 
     'theme' => [

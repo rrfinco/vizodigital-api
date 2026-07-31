@@ -31,17 +31,12 @@
                     </svg>
                 </button>
 
-                <a href="{{ route('docs.overview') }}" class="flex min-w-0 items-center gap-3">
-                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0b1f3a] text-white shadow-sm dark:bg-sky-600">
-                        <svg class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 7.5h.01M12 7.5h.01M16.5 7.5h.01M7.5 12h.01M12 12h.01M16.5 12h.01M7.5 16.5h.01M12 16.5h.01M16.5 16.5h.01" />
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 8l4 4 4-4M8 16l4-4 4 4" />
-                        </svg>
-                    </span>
-                    <span class="min-w-0">
-                        <span class="block truncate text-base font-semibold tracking-tight text-[#0b1f3a] dark:text-white">API Documentation</span>
-                        <span class="hidden truncate text-xs text-slate-500 sm:block">{{ $portalSettings->tagline() ?: 'Complete reference for integrating Authentication, Recharge & Bill Payment APIs.' }}</span>
-                    </span>
+                <a href="{{ route('docs.overview') }}" class="flex min-w-0 items-center">
+                    <img
+                        src="{{ $portalSettings->logoUrl() }}"
+                        alt="{{ $portalSettings->logoText() }}"
+                        class="h-9 w-auto shrink-0 object-contain"
+                    />
                 </a>
 
                 <div class="mx-auto hidden w-full max-w-md lg:block">

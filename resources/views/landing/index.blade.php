@@ -11,9 +11,11 @@
                 <p class="mb-4 text-sm font-semibold tracking-wide text-primary-600 dark:text-primary-400">
                     {{ config('portal.name') }}
                 </p>
-                <h1 class="max-w-xl text-4xl font-semibold tracking-tight text-portal-dark sm:text-5xl dark:text-white">
-                    {{ config('portal.brand.logo_text') }}
-                </h1>
+                <img
+                    src="{{ asset(config('portal.brand.logo')) }}"
+                    alt="{{ config('portal.brand.logo_text') }}"
+                    class="h-14 w-auto object-contain sm:h-16"
+                />
                 <p class="mt-4 max-w-lg text-lg text-slate-600 dark:text-slate-300">
                     {{ config('portal.tagline') }}
                 </p>

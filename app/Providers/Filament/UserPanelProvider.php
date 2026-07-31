@@ -20,6 +20,7 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\HtmlString;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class UserPanelProvider extends PanelProvider
@@ -32,7 +33,15 @@ class UserPanelProvider extends PanelProvider
             ->id('user')
             ->path('user')
             ->login()
-            ->brandName('')
+            ->brandName('USER portal')
+            ->brandLogo(fn (): HtmlString => new HtmlString(
+                view('filament.hooks.brand-mark', [
+                    'subtitle' => 'USER portal',
+                    'logoHeight' => '1.75rem',
+                ])->render()
+            ))
+            ->brandLogoHeight('auto')
+            ->favicon(fn (): string => asset('images/brand/vizo-icon.jpg'))
             ->colors([
                 'primary' => Color::Teal,
             ])
@@ -59,7 +68,7 @@ class UserPanelProvider extends PanelProvider
                 Authenticate::class,
             ]);
 
-        return $this->configureCrmLayout($panel, 'vizodigital api docs')
+        return $this->configureCrmLayout($panel, 'USER portal')
             ->userMenuItems([
                 'profile' => Action::make('profile')
                     ->label('Profile')
