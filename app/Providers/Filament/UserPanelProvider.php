@@ -66,10 +66,10 @@ class UserPanelProvider extends PanelProvider
                     ->icon(Heroicon::OutlinedUserCircle)
                     ->url(fn (): string => UserProfile::getUrl())
                     ->sort(10),
-                'logout' => Action::make('logout')
+                'logout' => fn (Action $action): Action => $action
                     ->label('Log out')
                     ->icon(Heroicon::ArrowLeftEndOnRectangle)
-                    ->url(fn (): string => filament()->getLogoutUrl())
+                    ->url(fn (): string => $this->panelLogoutPath())
                     ->postToUrl(),
             ]);
     }

@@ -31,9 +31,7 @@ class AppServiceProvider extends ServiceProvider
         // Relative Vite URLs avoid http/https mixed-content behind reverse proxies.
         Vite::createAssetPathsUsing(fn (string $path, ?bool $secure = null): string => '/'.ltrim($path, '/'));
 
-        if (str_starts_with((string) config('app.url'), 'https://')) {
-            URL::forceScheme('https');
-        }
+        $this->configurePublicUrl();
 
         Gate::policy(User::class, UserPolicy::class);
 
@@ -54,6 +52,31 @@ class AppServiceProvider extends ServiceProvider
 
         $this->registerSearchObservers();
         $this->registerDocsViewComposer();
+    }
+
+    private function configurePublicUrl(): void
+    {
+        if (app()->runningInConsole()) {
+            if (str_starts_with((string) config('app.url'), 'https://')) {
+                URL::forceScheme('https');
+            }
+
+            return;
+        }
+
+        $request = request();
+        $configuredHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+        $requestHost = $request->getHost();
+
+        // Dokploy / reverse proxies often leave APP_URL as localhost. Prefer the
+        // public request host so logout/search/admin links stay on the live domain.
+        if (is_string($configuredHost) && $configuredHost !== '' && $configuredHost !== $requestHost) {
+            URL::forceRootUrl($request->getSchemeAndHttpHost());
+        }
+
+        if ($request->isSecure() || str_starts_with((string) config('app.url'), 'https://')) {
+            URL::forceScheme('https');
+        }
     }
 
     private function registerSearchObservers(): void
