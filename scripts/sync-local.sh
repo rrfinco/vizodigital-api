@@ -21,6 +21,6 @@ fi
 
 echo "[sync] Done."
 echo "Local docs:  http://localhost:9021/docs"
-echo "Live docs:   https://docs.rrfinco.com/docs  (after Dokploy domain bind)"
-echo "UAT API:     https://uat-api.rrfinco.com"
-echo "Prod API:    https://api.rrfinco.com"
+echo "Live docs:   https://docs.vizodigital.com/docs  (after Dokploy domain bind)"
+echo "UAT API:     https://uat-api.vizodigital.com"
+echo "Prod API:    https://api.vizodigital.com"

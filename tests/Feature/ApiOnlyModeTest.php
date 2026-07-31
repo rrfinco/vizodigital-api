@@ -10,16 +10,16 @@ class ApiOnlyModeTest extends TestCase
     {
         config([
             'portal.api_only' => true,
-            'portal.public_url' => 'https://docs.rrfinco.com',
-            'app.url' => 'https://uat-api.rrfinco.com',
+            'portal.public_url' => 'https://docs.vizodigital.com',
+            'app.url' => 'https://uat-api.vizodigital.com',
         ]);
 
         $this->get('/')
             ->assertOk()
             ->assertJsonPath('mode', 'api_only')
-            ->assertJsonPath('portal', 'https://docs.rrfinco.com');
+            ->assertJsonPath('portal', 'https://docs.vizodigital.com');
 
-        $this->get('/docs')->assertNotFound()->assertJsonPath('portal', 'https://docs.rrfinco.com');
+        $this->get('/docs')->assertNotFound()->assertJsonPath('portal', 'https://docs.vizodigital.com');
         $this->get('/login')->assertNotFound();
         $this->get('/register')->assertNotFound();
         $this->get('/admin/login')->assertNotFound();

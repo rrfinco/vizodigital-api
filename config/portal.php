@@ -22,7 +22,7 @@ return [
     */
     'api_only' => (bool) env('PORTAL_API_ONLY', false),
 
-    'public_url' => env('PORTAL_PUBLIC_URL', 'https://docs.rrfinco.com'),
+    'public_url' => env('PORTAL_PUBLIC_URL', 'https://docs.vizodigital.com'),
 
     'brand' => [
         'short' => env('PORTAL_BRAND_SHORT', 'API Portal'),
