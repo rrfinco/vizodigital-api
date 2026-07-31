@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\RejectPortalWebWhenApiOnly;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -19,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         $middleware->statefulApi();
+
+        // Runs on web + Filament so UAT cannot expose docs/onboarding panels.
+        $middleware->append(RejectPortalWebWhenApiOnly::class);
 
         $middleware->validateCsrfTokens(except: [
             '/payment/webhook',

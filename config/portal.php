@@ -16,6 +16,14 @@ return [
 
     'tagline' => env('PORTAL_TAGLINE', 'Fast, Secure and Powerful APIs'),
 
+    /*
+    | When true (UAT API host), website / docs / onboarding / Filament panels are blocked.
+    | Only /api/* (and health/webhook) remain available.
+    */
+    'api_only' => (bool) env('PORTAL_API_ONLY', false),
+
+    'public_url' => env('PORTAL_PUBLIC_URL', 'https://docs.rrfinco.com'),
+
     'brand' => [
         'short' => env('PORTAL_BRAND_SHORT', 'API Portal'),
         'logo_text' => env('PORTAL_LOGO_TEXT', 'DevPortal'),
