@@ -96,59 +96,39 @@ class CmsFoundationSeeder extends Seeder
 
     private function seedNavigation(ApiVersion $version): void
     {
-        $items = [
+        // Getting Started is Overview (hardcoded) + CMS page links like Authentication.
+        // Explorer / FAQs / Changelog / SDK live under the Reference section in SidebarBuilder —
+        // do not seed them here or they duplicate in Getting Started.
+        NavigationItem::query()->updateOrCreate(
             [
                 'api_version_id' => null,
                 'label' => 'Overview',
+                'parent_id' => null,
+            ],
+            [
                 'target_type' => NavigationTargetType::Url,
                 'route_name' => 'docs.overview',
+                'url' => null,
+                'is_visible' => true,
                 'sort_order' => 1,
-            ],
-            [
-                'api_version_id' => $version->id,
-                'label' => 'API Explorer',
-                'target_type' => NavigationTargetType::Explorer,
-                'route_name' => null,
-                'sort_order' => 2,
-            ],
-            [
-                'api_version_id' => $version->id,
-                'label' => 'FAQs',
-                'target_type' => NavigationTargetType::Url,
-                'route_name' => 'docs.faqs.index',
-                'sort_order' => 3,
-            ],
-            [
-                'api_version_id' => $version->id,
-                'label' => 'Changelog',
-                'target_type' => NavigationTargetType::Url,
-                'route_name' => 'docs.changelog.index',
-                'sort_order' => 4,
-            ],
-            [
-                'api_version_id' => $version->id,
-                'label' => 'SDKs',
-                'target_type' => NavigationTargetType::Url,
-                'route_name' => 'docs.sdk.index',
-                'sort_order' => 5,
-            ],
-        ];
+            ]
+        );
 
-        foreach ($items as $item) {
-            NavigationItem::query()->updateOrCreate(
-                [
-                    'api_version_id' => $item['api_version_id'],
-                    'label' => $item['label'],
-                    'parent_id' => null,
-                ],
-                [
-                    'target_type' => $item['target_type'],
-                    'route_name' => $item['route_name'],
-                    'url' => null,
-                    'is_visible' => true,
-                    'sort_order' => $item['sort_order'],
-                ]
-            );
-        }
+        // Hide legacy duplicate Reference links if an older seed created them.
+        NavigationItem::query()
+            ->where(function ($query) use ($version): void {
+                $query->where('api_version_id', $version->id)
+                    ->orWhereNull('api_version_id');
+            })
+            ->where(function ($query): void {
+                $query->where('target_type', NavigationTargetType::Explorer)
+                    ->orWhereIn('route_name', [
+                        'docs.faqs.index',
+                        'docs.changelog.index',
+                        'docs.sdk.index',
+                    ])
+                    ->orWhereIn('label', ['API Explorer', 'FAQs', 'Changelog', 'SDKs', 'SDK']);
+            })
+            ->update(['is_visible' => false]);
     }
 }

@@ -74,6 +74,10 @@ class SidebarBuilder
     {
         $nodes = collect();
         $overviewHref = route('docs.overview');
+        $referenceHrefs = $this->referenceNodes($version)
+            ->map(fn (NavigationNodeDto $node) => $node->href)
+            ->filter()
+            ->values();
 
         $nodes->push(new NavigationNodeDto(
             label: 'Overview',
@@ -87,6 +91,11 @@ class SidebarBuilder
 
             // Avoid duplicate Overview — CMS foundation also seeds docs.overview.
             if ($this->sameDocsUrl($mapped->href, $overviewHref)) {
+                continue;
+            }
+
+            // Reference section already owns Explorer / FAQs / Changelog / SDK.
+            if ($referenceHrefs->contains(fn (?string $href) => $this->sameDocsUrl($mapped->href, $href))) {
                 continue;
             }
 

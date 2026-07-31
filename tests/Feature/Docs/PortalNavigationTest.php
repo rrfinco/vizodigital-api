@@ -126,6 +126,46 @@ class PortalNavigationTest extends TestCase
             ->assertDontSee('Sidebar will load from CMS navigation');
     }
 
+    public function test_docs_sidebar_keeps_reference_links_out_of_getting_started(): void
+    {
+        NavigationItem::query()->updateOrCreate(
+            [
+                'api_version_id' => $this->version->id,
+                'label' => 'API Explorer',
+                'parent_id' => null,
+            ],
+            [
+                'target_type' => NavigationTargetType::Explorer,
+                'route_name' => null,
+                'url' => null,
+                'is_visible' => true,
+                'sort_order' => 2,
+            ]
+        );
+
+        NavigationItem::query()->updateOrCreate(
+            [
+                'api_version_id' => $this->version->id,
+                'label' => 'FAQs',
+                'parent_id' => null,
+            ],
+            [
+                'target_type' => NavigationTargetType::Url,
+                'route_name' => 'docs.faqs.index',
+                'url' => null,
+                'is_visible' => true,
+                'sort_order' => 3,
+            ]
+        );
+
+        $html = $this->get(route('docs.overview'))->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($html, '>API Explorer</span>'));
+        $this->assertSame(1, substr_count($html, '>FAQs</span>'));
+        $this->assertSame(1, substr_count($html, '>Changelog</span>'));
+        $this->assertSame(1, substr_count($html, '>SDK</span>'));
+    }
+
     public function test_docs_sidebar_has_single_overview_and_only_current_page_active(): void
     {
         $this->actingAs($this->admin);
