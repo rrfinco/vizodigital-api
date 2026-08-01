@@ -2,6 +2,9 @@
 
 namespace App\Filament\User\Pages;
 
+use App\Filament\User\Widgets\DeveloperHeroCards;
+use App\Filament\User\Widgets\DeveloperShortcodesWidget;
+use App\Filament\User\Widgets\DeveloperTransactionHistory;
 use BackedEnum;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Filament\Support\Icons\Heroicon;
@@ -24,6 +27,15 @@ class Dashboard extends BaseDashboard
         return [
             'md' => 2,
             'xl' => 3,
+        ];
+    }
+
+    public function getWidgets(): array
+    {
+        return [
+            DeveloperHeroCards::class,
+            DeveloperTransactionHistory::class,
+            DeveloperShortcodesWidget::class,
         ];
     }
 }

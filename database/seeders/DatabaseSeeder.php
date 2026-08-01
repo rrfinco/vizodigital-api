@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             RechargeDocumentationSeeder::class,
             WalletDocumentationSeeder::class,
             BillPaymentDocumentationSeeder::class,
+            PlanApiDocumentationSeeder::class,
         ]);
     }
 }

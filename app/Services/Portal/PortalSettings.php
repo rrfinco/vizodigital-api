@@ -146,6 +146,16 @@ class PortalSettings
         return (string) $this->get('inspay_token', '');
     }
 
+    public function ekycHubUsername(): string
+    {
+        return (string) $this->get('ekychub_username', '');
+    }
+
+    public function ekycHubToken(): string
+    {
+        return (string) $this->get('ekychub_token', '');
+    }
+
     public function walletOnlineEnabled(): bool
     {
         return (bool) $this->get('wallet_online_enabled', true);

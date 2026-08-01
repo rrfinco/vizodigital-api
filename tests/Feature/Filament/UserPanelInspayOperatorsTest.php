@@ -1,0 +1,136 @@
+<?php
+
+namespace Tests\Feature\Filament;
+
+use App\Enums\Role;
+use App\Filament\Pages\InspayOperators as AdminInspayOperators;
+use App\Filament\User\Pages\InspayOperators as UserInspayOperators;
+use App\Models\User;
+use App\Services\Inspay\InspayOperatorCatalog;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Livewire\Livewire;
+use Tests\TestCase;
+
+class UserPanelInspayOperatorsTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(\Database\Seeders\RolePermissionSeeder::class);
+    }
+
+    public function test_developer_can_access_inspay_operators_page(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(Role::Developer->value);
+
+        $this->actingAs($user)
+            ->get('/user/inspay-operators')
+            ->assertOk()
+            ->assertSee('Bill Payment Opcode');
+    }
+
+    public function test_catalog_loads_operators_and_categories(): void
+    {
+        $catalog = app(InspayOperatorCatalog::class);
+
+        $this->assertGreaterThan(1000, $catalog->all()->count());
+        $this->assertContains('Electricity Bill', $catalog->categories());
+        $this->assertTrue(
+            $catalog->search(category: 'Credit Card')->isNotEmpty()
+        );
+        $this->assertTrue(
+            $catalog->search(query: 'Airtel')->isNotEmpty()
+        );
+    }
+
+    public function test_filters_narrow_results(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(Role::Developer->value);
+
+        Livewire::actingAs($user)
+            ->test(UserInspayOperators::class)
+            ->set('category', 'DTH Recharge')
+            ->assertSee('DTH Recharge')
+            ->set('search', 'Airtel')
+            ->assertSee('Airtel');
+    }
+
+    public function test_clear_filters_resets_category_and_search(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(Role::Developer->value);
+
+        Livewire::actingAs($user)
+            ->test(UserInspayOperators::class)
+            ->set('category', 'DTH Recharge')
+            ->set('search', 'Airtel')
+            ->assertSet('category', 'DTH Recharge')
+            ->assertSet('search', 'Airtel')
+            ->call('clearFilters')
+            ->assertSet('category', '')
+            ->assertSet('search', '')
+            ->assertSet('filterVersion', 1);
+    }
+
+    public function test_clear_category_and_search_individually(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(Role::Developer->value);
+
+        Livewire::actingAs($user)
+            ->test(UserInspayOperators::class)
+            ->set('category', 'Credit Card')
+            ->set('search', 'ICICI')
+            ->call('clearCategory')
+            ->assertSet('category', '')
+            ->assertSet('search', 'ICICI')
+            ->call('clearSearch')
+            ->assertSet('search', '');
+    }
+
+    public function test_category_chip_filter_works(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(Role::Developer->value);
+
+        Livewire::actingAs($user)
+            ->test(UserInspayOperators::class)
+            ->call('selectCategory', 'Credit Card')
+            ->assertSet('category', 'Credit Card')
+            ->assertSee('Credit Card');
+    }
+
+    public function test_admin_can_access_inspay_operators_page(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::Admin->value);
+
+        $this->actingAs($admin)
+            ->get('/admin/inspay-operators')
+            ->assertOk()
+            ->assertSee('InsPay Operator Codes');
+    }
+
+    public function test_guest_is_redirected_from_admin_inspay_operators(): void
+    {
+        $this->get('/admin/inspay-operators')
+            ->assertRedirect();
+    }
+
+    public function test_admin_livewire_page_loads(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::Admin->value);
+
+        Livewire::actingAs($admin)
+            ->test(AdminInspayOperators::class)
+            ->assertSee('InsPay Operator Codes')
+            ->call('selectCategory', 'Fastag')
+            ->assertSet('category', 'Fastag');
+    }
+}

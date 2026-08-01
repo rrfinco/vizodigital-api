@@ -70,6 +70,103 @@ class Wallet extends Page
     }
 
     /**
+     * Unified wallet activity: deposits, debits/credits, and commission earnings.
+     *
+     * @return \Illuminate\Support\Collection<int, array{
+     *   id: string,
+     *   category: string,
+     *   title: string,
+     *   description: string,
+     *   amount: float,
+     *   is_credit: bool,
+     *   is_earning: bool,
+     *   status: string,
+     *   status_color: string,
+     *   balance_after: ?float,
+     *   created_at: \Illuminate\Support\Carbon
+     * }>
+     */
+    public function getRecentTransactions(): \Illuminate\Support\Collection
+    {
+        $userId = auth()->id();
+        if (! $userId) {
+            return collect();
+        }
+
+        $walletTx = \App\Models\WalletTransaction::query()
+            ->where('user_id', $userId)
+            ->latest()
+            ->take(20)
+            ->get()
+            ->map(function (\App\Models\WalletTransaction $tx): array {
+                $isCredit = $tx->type === 'credit';
+                $description = (string) ($tx->description ?: '');
+                $isEarning = $isCredit && str_contains(mb_strtolower($description), 'commission');
+
+                $title = match (true) {
+                    $isEarning => 'Commission Earning',
+                    $isCredit && str_contains(mb_strtolower($description), 'reversal') => 'Refund / Reversal',
+                    $isCredit => 'Wallet Credit',
+                    default => 'Wallet Debit',
+                };
+
+                return [
+                    'id' => 'tx-'.$tx->id,
+                    'category' => $isEarning ? 'earning' : $tx->type,
+                    'title' => $title,
+                    'description' => $description !== ''
+                        ? $description
+                        : ($isCredit ? 'Funds added to wallet' : 'Wallet charge'),
+                    'amount' => abs((float) $tx->amount),
+                    'is_credit' => $isCredit,
+                    'is_earning' => $isEarning,
+                    'status' => 'Success',
+                    'status_color' => 'success',
+                    'balance_after' => (float) $tx->balance_after,
+                    'created_at' => $tx->created_at ?? now(),
+                ];
+            });
+
+        $deposits = Deposit::query()
+            ->where('user_id', $userId)
+            ->latest()
+            ->take(10)
+            ->get()
+            ->map(function (Deposit $deposit): array {
+                $methodLabel = $deposit->method === Deposit::METHOD_BANK_TRANSFER ? 'Bank transfer' : 'Online';
+                $statusColor = match ($deposit->status) {
+                    'success', 'approved' => 'success',
+                    'pending' => 'warning',
+                    default => 'danger',
+                };
+
+                $ref = $deposit->utr
+                    ? 'UTR '.$deposit->utr
+                    : ($deposit->gateway_ref ? 'Ref '.$deposit->gateway_ref : $deposit->order_id);
+
+                return [
+                    'id' => 'dep-'.$deposit->id,
+                    'category' => 'deposit',
+                    'title' => 'Deposit · '.$methodLabel,
+                    'description' => $ref,
+                    'amount' => abs((float) $deposit->amount),
+                    'is_credit' => true,
+                    'is_earning' => false,
+                    'status' => strtoupper((string) $deposit->status),
+                    'status_color' => $statusColor,
+                    'balance_after' => null,
+                    'created_at' => $deposit->created_at ?? now(),
+                ];
+            });
+
+        return $walletTx
+            ->concat($deposits)
+            ->sortByDesc(fn (array $row) => $row['created_at']->getTimestamp())
+            ->take(15)
+            ->values();
+    }
+
+    /**
      * @return array{account_name: string, account_number: string, ifsc: string, bank_name: string, upi_id: string}
      */
     public function getBankDetails(): array

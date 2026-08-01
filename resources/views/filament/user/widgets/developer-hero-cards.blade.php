@@ -8,9 +8,9 @@
                 <time datetime="{{ now()->toDateString() }}">{{ $dateLabel }}</time>
             </div>
             <div class="dev-hero-card__body">
-                <p class="dev-hero-card__eyebrow">{{ $greeting }}</p>
+                <p class="dev-hero-card__eyebrow">{{ $greeting }} 👋</p>
                 <h2 class="dev-hero-card__title">{{ $userName }}</h2>
-                <p class="dev-hero-card__hint">Developer workspace</p>
+                <p class="dev-hero-card__hint">Developer Workspace</p>
             </div>
         </article>
 
@@ -26,9 +26,9 @@
                     </svg>
                 </div>
             </div>
-            <p class="dev-hero-card__sub">Available for recharge APIs</p>
+            <p class="dev-hero-card__sub">Available for recharge & bill pay APIs</p>
             <a href="{{ $walletUrl }}" class="dev-hero-card__cta">
-                Add Funds
+                + Add Funds
             </a>
         </article>
 
@@ -44,9 +44,9 @@
                     </svg>
                 </div>
             </div>
-            <p class="dev-hero-card__sub">Lifetime commission earnings</p>
+            <p class="dev-hero-card__sub">Lifetime commission rewards</p>
             <a href="{{ $walletUrl }}" class="dev-hero-card__cta">
-                View Wallet
+                View Wallet &rarr;
             </a>
         </article>
     </div>

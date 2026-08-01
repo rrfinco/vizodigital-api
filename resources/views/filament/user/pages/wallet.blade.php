@@ -1,6 +1,6 @@
 @php
     $user = auth()->user();
-    $recentDeposits = $this->getRecentDeposits();
+    $recentTransactions = $this->getRecentTransactions();
     $presets = [500, 1000, 2000, 5000, 10000];
     $onlineEnabled = $this->isOnlineEnabled();
     $bankEnabled = $this->isBankTransferEnabled();
@@ -251,7 +251,7 @@
                 </x-filament::section>
             </div>
 
-            {{-- Recent deposits --}}
+            {{-- Transactions (deposits + wallet + earnings) --}}
             <div class="lg:col-span-3">
                 <x-filament::section>
                     <x-slot name="heading">
@@ -259,73 +259,114 @@
                             <span class="wallet-icon-wrap">
                                 <x-filament::icon icon="heroicon-o-clock" class="h-4 w-4 text-teal-600 dark:text-teal-300" />
                             </span>
-                            <span class="font-semibold">Recent Deposits</span>
+                            <span class="font-semibold">Transactions</span>
                         </div>
                     </x-slot>
 
                     <x-slot name="description">
-                        Latest top-ups to your main wallet
+                        Deposits, wallet usage, and commission earnings
                     </x-slot>
 
-                    @if ($recentDeposits->isEmpty())
+                    @if ($recentTransactions->isEmpty())
                         <div class="wallet-empty">
                             <div class="wallet-empty__icon" aria-hidden="true">
                                 <x-filament::icon icon="heroicon-o-banknotes" class="h-7 w-7" />
                             </div>
-                            <p class="wallet-empty__title">No deposits yet</p>
+                            <p class="wallet-empty__title">No transactions yet</p>
                             <p class="wallet-empty__hint">
-                                Add funds to get started — your transactions will show up here.
+                                Add funds or run recharge APIs — deposits and earnings will show up here.
                             </p>
                         </div>
                     @else
-                        <div class="wallet-table-wrap mt-1">
+                        {{-- Mobile cards --}}
+                        <div class="space-y-3 md:hidden">
+                            @foreach ($recentTransactions as $tx)
+                                <div class="inspay-ops-card space-y-2">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="min-w-0">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <p class="text-sm font-semibold text-gray-900 dark:text-white">
+                                                    {{ $tx['title'] }}
+                                                </p>
+                                                @if ($tx['is_earning'])
+                                                    <span class="inspay-ops-badge">Earning</span>
+                                                @endif
+                                            </div>
+                                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400 break-words">
+                                                {{ $tx['description'] }}
+                                            </p>
+                                            <p class="mt-1 text-[11px] text-gray-400">
+                                                {{ $tx['created_at']->format('M d, Y · h:i A') }}
+                                            </p>
+                                        </div>
+                                        <div class="text-right shrink-0">
+                                            <p @class([
+                                                'font-mono text-sm font-bold',
+                                                'text-emerald-600 dark:text-emerald-400' => $tx['is_credit'],
+                                                'text-gray-900 dark:text-white' => ! $tx['is_credit'],
+                                            ])>
+                                                {{ $tx['is_credit'] ? '+' : '-' }}₹{{ number_format($tx['amount'], 2) }}
+                                            </p>
+                                            <x-filament::badge :color="$tx['status_color']" class="mt-1">
+                                                {{ $tx['status'] }}
+                                            </x-filament::badge>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+
+                        {{-- Desktop table --}}
+                        <div class="wallet-table-wrap mt-1 hidden md:block">
                             <table class="wallet-table">
                                 <thead>
                                     <tr>
                                         <th>Date</th>
-                                        <th>Order</th>
+                                        <th>Details</th>
                                         <th>Amount</th>
                                         <th>Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach ($recentDeposits as $deposit)
-                                        @php
-                                            $color = match ($deposit->status) {
-                                                'success' => 'success',
-                                                'pending' => 'warning',
-                                                default => 'danger',
-                                            };
-                                            $methodLabel = $deposit->method === 'bank_transfer' ? 'Bank' : 'Online';
-                                        @endphp
-                                        <tr>
+                                    @foreach ($recentTransactions as $tx)
+                                        <tr wire:key="{{ $tx['id'] }}">
                                             <td>
                                                 <div class="wallet-table__date">
-                                                    {{ $deposit->created_at->format('M d, Y') }}
+                                                    {{ $tx['created_at']->format('M d, Y') }}
                                                 </div>
                                                 <div class="wallet-table__time">
-                                                    {{ $deposit->created_at->format('h:i A') }}
+                                                    {{ $tx['created_at']->format('h:i A') }}
                                                 </div>
                                             </td>
                                             <td>
-                                                <div class="wallet-table__mono" title="{{ $deposit->order_id }}">
-                                                    {{ \Illuminate\Support\Str::limit($deposit->order_id, 18) }}
-                                                </div>
-                                                <div class="wallet-table__ref">
-                                                    {{ $methodLabel }}
-                                                    @if ($deposit->utr)
-                                                        · UTR {{ \Illuminate\Support\Str::limit($deposit->utr, 12) }}
-                                                    @elseif ($deposit->gateway_ref)
-                                                        · Ref {{ \Illuminate\Support\Str::limit($deposit->gateway_ref, 12) }}
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <div class="wallet-table__date">
+                                                        {{ $tx['title'] }}
+                                                    </div>
+                                                    @if ($tx['is_earning'])
+                                                        <span class="inspay-ops-badge">Earning</span>
                                                     @endif
                                                 </div>
-                                            </td>
-                                            <td class="wallet-table__amount">
-                                                ₹{{ number_format($deposit->amount, 2) }}
+                                                <div class="wallet-table__ref" title="{{ $tx['description'] }}">
+                                                    {{ \Illuminate\Support\Str::limit($tx['description'], 48) }}
+                                                </div>
+                                                @if ($tx['balance_after'] !== null)
+                                                    <div class="wallet-table__time">
+                                                        Bal ₹{{ number_format($tx['balance_after'], 2) }}
+                                                    </div>
+                                                @endif
                                             </td>
                                             <td>
-                                                <x-filament::badge :color="$color">
-                                                    {{ strtoupper($deposit->status) }}
+                                                <div @class([
+                                                    'wallet-table__amount',
+                                                    'text-emerald-600 dark:text-emerald-400' => $tx['is_credit'],
+                                                ])>
+                                                    {{ $tx['is_credit'] ? '+' : '-' }}₹{{ number_format($tx['amount'], 2) }}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <x-filament::badge :color="$tx['status_color']">
+                                                    {{ $tx['status'] }}
                                                 </x-filament::badge>
                                             </td>
                                         </tr>

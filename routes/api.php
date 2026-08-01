@@ -31,5 +31,17 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
         Route::post('/bill-payment/credit-card/bill-pay', [\App\Http\Controllers\Api\V1\CreditCardBillPaymentController::class, 'pay'])
             ->name('bill-payment.credit-card.pay');
+
+        Route::post('/plan/operator-fetch', [\App\Http\Controllers\Api\V1\PlanApiController::class, 'operatorFetch'])
+            ->name('plan.operator-fetch');
+
+        Route::post('/plan/operator-plan-fetch', [\App\Http\Controllers\Api\V1\PlanApiController::class, 'operatorPlanFetch'])
+            ->name('plan.operator-plan-fetch');
+
+        Route::post('/plan/dth-plan-fetch', [\App\Http\Controllers\Api\V1\PlanApiController::class, 'dthPlanFetch'])
+            ->name('plan.dth-plan-fetch');
+
+        Route::post('/plan/dth-info', [\App\Http\Controllers\Api\V1\PlanApiController::class, 'dthInfo'])
+            ->name('plan.dth-info');
     });
 });

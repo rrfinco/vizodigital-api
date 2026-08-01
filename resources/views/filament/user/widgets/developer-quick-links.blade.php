@@ -17,6 +17,20 @@
             </a>
 
             <a
+                href="{{ \App\Filament\User\Pages\RechargeOperators::getUrl() }}"
+                class="fi-btn relative grid-flow-col items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold outline-none transition duration-75 bg-gray-100 text-gray-950 hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+            >
+                Recharge Operators
+            </a>
+
+            <a
+                href="{{ \App\Filament\User\Pages\InspayOperators::getUrl() }}"
+                class="fi-btn relative grid-flow-col items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold outline-none transition duration-75 bg-gray-100 text-gray-950 hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
+            >
+                InsPay Operators
+            </a>
+
+            <a
                 href="{{ url('/') }}"
                 class="fi-btn relative grid-flow-col items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold outline-none transition duration-75 bg-gray-100 text-gray-950 hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/20"
             >

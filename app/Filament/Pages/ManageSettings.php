@@ -64,6 +64,8 @@ class ManageSettings extends Page
             'rrfinco_salt_key' => $settings->rrfincoSaltKey(),
             'inspay_username' => $settings->inspayUsername(),
             'inspay_token' => $settings->inspayToken(),
+            'ekychub_username' => $settings->ekycHubUsername(),
+            'ekychub_token' => $settings->ekycHubToken(),
             'wallet_online_enabled' => $settings->walletOnlineEnabled(),
             'wallet_bank_transfer_enabled' => $settings->walletBankTransferEnabled(),
             'bank_account_name' => $settings->bankAccountName(),
@@ -183,6 +185,20 @@ class ManageSettings extends Page
                             ->maxLength(255),
                     ]),
 
+                Section::make('EkycHub Configuration')
+                    ->description('Credentials for operator find, plan fetch, and DTH info APIs.')
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('ekychub_username')
+                            ->label('Username')
+                            ->maxLength(255),
+                        TextInput::make('ekychub_token')
+                            ->label('Token')
+                            ->password()
+                            ->revealable()
+                            ->maxLength(255),
+                    ]),
+
                 Section::make('Wallet funding methods')
                     ->description('Control which add-funds options developers see, and the bank account details for manual transfers.')
                     ->columns(2)
@@ -248,6 +264,9 @@ class ManageSettings extends Page
 
         $settings->set('inspay_username', $state['inspay_username'] ?? '', 'payment');
         $settings->set('inspay_token', $state['inspay_token'] ?? '', 'payment');
+
+        $settings->set('ekychub_username', $state['ekychub_username'] ?? '', 'payment');
+        $settings->set('ekychub_token', $state['ekychub_token'] ?? '', 'payment');
 
         $settings->set('wallet_online_enabled', (bool) ($state['wallet_online_enabled'] ?? false), 'payment');
         $settings->set('wallet_bank_transfer_enabled', (bool) ($state['wallet_bank_transfer_enabled'] ?? false), 'payment');

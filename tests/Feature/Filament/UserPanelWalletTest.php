@@ -3,9 +3,10 @@
 namespace Tests\Feature\Filament;
 
 use App\Enums\Role;
-use App\Models\User;
-use App\Services\Portal\PortalSettings;
 use App\Filament\User\Pages\Wallet;
+use App\Models\User;
+use App\Models\WalletTransaction;
+use App\Services\Portal\PortalSettings;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
@@ -57,5 +58,29 @@ class UserPanelWalletTest extends TestCase
             ->set('amount', 250)
             ->call('submitPayment')
             ->assertRedirect('https://pay.rrfinco.com/checkout/xyz123');
+    }
+
+    public function test_wallet_transactions_include_commission_earnings(): void
+    {
+        $user = User::factory()->create([
+            'wallet_balance' => 1000,
+            'earning_balance' => 25,
+        ]);
+        $user->assignRole(Role::Developer->value);
+
+        WalletTransaction::query()->create([
+            'user_id' => $user->id,
+            'amount' => 3.00,
+            'type' => 'credit',
+            'description' => 'Recharge commission earned for 9876543210 (Amount: ₹100)',
+            'balance_before' => 997,
+            'balance_after' => 1000,
+        ]);
+
+        Livewire::actingAs($user)
+            ->test(Wallet::class)
+            ->assertSee('Commission Earning')
+            ->assertSee('Earning')
+            ->assertSee('Recharge commission earned');
     }
 }

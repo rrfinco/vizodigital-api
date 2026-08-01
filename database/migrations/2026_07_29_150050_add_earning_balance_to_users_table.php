@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasColumn('users', 'earning_balance')) {
+            return;
+        }
+
         Schema::table('users', function (Blueprint $table) {
             $table->decimal('earning_balance', 16, 4)->default(0.0000)->after('wallet_balance');
         });
@@ -21,6 +25,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (! Schema::hasColumn('users', 'earning_balance')) {
+            return;
+        }
+
         Schema::table('users', function (Blueprint $table) {
             $table->dropColumn('earning_balance');
         });
