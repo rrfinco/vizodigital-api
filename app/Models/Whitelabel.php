@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Enums\WhitelabelDomainRole;
 use App\Enums\WhitelabelStatus;
 use Database\Factories\WhitelabelFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class Whitelabel extends Model
 {
@@ -82,6 +84,27 @@ class Whitelabel extends Model
     public function isActive(): bool
     {
         return ($this->status ?? WhitelabelStatus::Active)->isUsable();
+    }
+
+    public function domainForRole(WhitelabelDomainRole $role): ?WhitelabelDomain
+    {
+        /** @var Collection<int, WhitelabelDomain> $domains */
+        $domains = $this->relationLoaded('domains')
+            ? $this->domains
+            : $this->domains()->get();
+
+        $matching = $domains->filter(
+            fn (WhitelabelDomain $domain): bool => ($domain->role ?? WhitelabelDomainRole::Portal) === $role
+        );
+
+        return $matching->firstWhere('is_primary', true) ?? $matching->first();
+    }
+
+    public function baseUrlForRole(WhitelabelDomainRole $role): ?string
+    {
+        $domain = $this->domainForRole($role);
+
+        return $domain?->baseUrl();
     }
 
     public function debitWallet(float $amount, string $description, ?Model $reference = null): WhitelabelWalletTransaction

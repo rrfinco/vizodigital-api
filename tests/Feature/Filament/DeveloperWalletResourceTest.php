@@ -53,7 +53,9 @@ class DeveloperWalletResourceTest extends TestCase
 
         $this->actingAs($developer)
             ->get('/admin/developer-wallets')
-            ->assertForbidden();
+            ->assertRedirect();
+
+        $this->assertGuest();
     }
 
     public function test_staff_users_are_not_listed(): void

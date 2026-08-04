@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Enums\EnvironmentSlug;
 use App\Http\Controllers\Controller;
 use App\Services\Credentials\CredentialProvisioner;
+use App\Services\Whitelabel\WhitelabelEnvironmentUrls;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -14,6 +15,7 @@ class ClientCredentialController extends Controller
 {
     public function __construct(
         private readonly CredentialProvisioner $credentials,
+        private readonly WhitelabelEnvironmentUrls $whitelabelUrls,
     ) {}
 
     public function store(Request $request): JsonResponse
@@ -50,7 +52,9 @@ class ClientCredentialController extends Controller
             'token' => $token->plainTextToken,
             'token_type' => 'Bearer',
             'environment' => $slug->value,
-            'base_url' => $credential->environment?->base_url,
+            'base_url' => $credential->environment
+                ? $this->whitelabelUrls->resolve($credential->environment, user: $user)
+                : null,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -82,7 +86,9 @@ class ClientCredentialController extends Controller
         return response()->json([
             'ok' => true,
             'environment' => $slug->value,
-            'base_url' => $credential->environment?->base_url,
+            'base_url' => $credential->environment
+                ? $this->whitelabelUrls->resolve($credential->environment, user: $user)
+                : null,
             'client_id' => $credential->client_id,
             'status' => $credential->status->value,
         ]);

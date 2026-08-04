@@ -35,7 +35,7 @@
                 </x-slot>
 
                 <x-slot name="description">
-                    Base URL: {{ $environment->base_url }}
+                    Base URL: {{ $panel['base_url'] }}
                 </x-slot>
 
                 @if (! $credential)
@@ -75,7 +75,7 @@
 
                         @include('filament.user.partials.credential-field', [
                             'label' => 'Base URL',
-                            'value' => $environment->base_url,
+                            'value' => $panel['base_url'],
                             'secret' => false,
                         ])
                     </div>

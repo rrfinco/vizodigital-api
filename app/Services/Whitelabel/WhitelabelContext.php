@@ -29,7 +29,7 @@ class WhitelabelContext
 
         $domain = WhitelabelDomain::query()
             ->where('host', $host)
-            ->with('whitelabel')
+            ->with(['whitelabel.domains'])
             ->first();
 
         if ($domain?->whitelabel) {

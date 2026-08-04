@@ -5,11 +5,17 @@ namespace App\Services\Environment;
 use App\Models\ApiEndpoint;
 use App\Models\ApiEnvironment;
 use App\Models\EndpointBaseUrl;
+use App\Services\Whitelabel\WhitelabelEnvironmentUrls;
 
 class BaseUrlResolver
 {
+    public function __construct(
+        private readonly WhitelabelEnvironmentUrls $whitelabelUrls,
+    ) {}
+
     /**
      * Cascade: endpoint → group → category → version+env pivot → environment.base_url
+     * (environment base_url is remapped to the active white-label UAT/API host when present)
      */
     public function forEndpoint(ApiEndpoint $endpoint, ApiEnvironment $environment): string
     {
@@ -52,7 +58,7 @@ class BaseUrlResolver
             }
         }
 
-        return rtrim((string) $environment->base_url, '/');
+        return $this->whitelabelUrls->resolve($environment);
     }
 
     private function morphOverride(object $urlable, ApiEnvironment $environment): ?string

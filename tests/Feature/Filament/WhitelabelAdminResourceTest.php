@@ -82,7 +82,9 @@ class WhitelabelAdminResourceTest extends TestCase
 
         $this->actingAs($developer)
             ->get('/admin/whitelabels')
-            ->assertForbidden();
+            ->assertRedirect();
+
+        $this->assertGuest();
     }
 
     public function test_approve_float_request_credits_whitelabel_wallet(): void

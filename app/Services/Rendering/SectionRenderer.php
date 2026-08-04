@@ -7,12 +7,14 @@ use App\Enums\SectionKey;
 use App\Models\ApiEndpoint;
 use App\Models\ApiEnvironment;
 use App\Models\EndpointSection;
+use App\Services\Whitelabel\WhitelabelSampleUrlRewriter;
 use Illuminate\Support\Collection;
 
 class SectionRenderer
 {
     public function __construct(
         private readonly MarkdownRenderer $markdown,
+        private readonly WhitelabelSampleUrlRewriter $sampleUrls,
     ) {}
 
     /**
@@ -140,7 +142,10 @@ class SectionRenderer
             return null;
         }
 
-        return ['examples' => $examples, 'environment' => $environment];
+        return [
+            'examples' => $this->sampleUrls->rewriteExamples($examples),
+            'environment' => $environment,
+        ];
     }
 
     /**
@@ -158,7 +163,10 @@ class SectionRenderer
             return null;
         }
 
-        return ['samples' => $samples, 'environment' => $environment];
+        return [
+            'samples' => $this->sampleUrls->rewriteCodeSamples($samples),
+            'environment' => $environment,
+        ];
     }
 
     /**

@@ -6,6 +6,7 @@ use App\Models\ApiEnvironment;
 use App\Models\ApiVersion;
 use App\Repositories\Contracts\DocumentationRepositoryInterface;
 use App\Repositories\Contracts\EnvironmentRepositoryInterface;
+use App\Services\Whitelabel\WhitelabelEnvironmentUrls;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -30,6 +31,7 @@ class PortalContext
     public function __construct(
         private readonly DocumentationRepositoryInterface $documentation,
         private readonly EnvironmentRepositoryInterface $environmentsRepo,
+        private readonly WhitelabelEnvironmentUrls $whitelabelUrls,
     ) {}
 
     public function resolve(?Request $request = null): self
@@ -38,7 +40,9 @@ class PortalContext
 
         $this->versions = $this->documentation->publishedVersions();
         $this->version = $this->resolveVersion($request);
-        $this->environments = $this->resolveEnvironmentList($this->version);
+        $this->environments = $this->whitelabelUrls->applyToCollection(
+            $this->resolveEnvironmentList($this->version)
+        );
         $this->environment = $this->resolveEnvironment($request);
         $this->resolved = true;
 
@@ -84,6 +88,7 @@ class PortalContext
         $environment = $this->environmentsRepo->findBySlug($slug);
 
         if ($environment) {
+            $environment = $this->whitelabelUrls->applyToEnvironment($environment);
             session([self::SESSION_ENVIRONMENT => $environment->slug instanceof \BackedEnum
                 ? $environment->slug->value
                 : (string) $environment->slug]);
@@ -150,7 +155,7 @@ class PortalContext
     {
         $queryEnv = $request->query('env');
         if (is_string($queryEnv) && $queryEnv !== '') {
-            $environment = $this->findInList($queryEnv) ?? $this->environmentsRepo->findBySlug($queryEnv);
+            $environment = $this->findEnvironment($queryEnv);
             if ($environment) {
                 $this->setEnvironment(
                     $environment->slug instanceof \BackedEnum
@@ -164,7 +169,7 @@ class PortalContext
 
         $sessionSlug = session(self::SESSION_ENVIRONMENT);
         if (is_string($sessionSlug) && $sessionSlug !== '') {
-            $environment = $this->findInList($sessionSlug) ?? $this->environmentsRepo->findBySlug($sessionSlug);
+            $environment = $this->findEnvironment($sessionSlug);
             if ($environment) {
                 return $environment;
             }
@@ -172,10 +177,29 @@ class PortalContext
 
         $default = $this->environmentsRepo->default();
         if ($default && $this->environments?->contains('id', $default->id)) {
-            return $default;
+            return $this->findEnvironment(
+                $default->slug instanceof \BackedEnum
+                    ? $default->slug->value
+                    : (string) $default->slug
+            );
         }
 
-        return $this->environments?->first() ?? $default;
+        return $this->environments?->first()
+            ?? ($default ? $this->whitelabelUrls->applyToEnvironment($default) : null);
+    }
+
+    private function findEnvironment(string $slug): ?ApiEnvironment
+    {
+        $fromList = $this->findInList($slug);
+        if ($fromList) {
+            return $fromList;
+        }
+
+        $fromRepo = $this->environmentsRepo->findBySlug($slug);
+
+        return $fromRepo
+            ? $this->whitelabelUrls->applyToEnvironment($fromRepo)
+            : null;
     }
 
     private function findInList(string $slug): ?ApiEnvironment
