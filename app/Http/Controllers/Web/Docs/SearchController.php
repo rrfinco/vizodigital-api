@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Web\Docs;
 
 use App\Enums\SearchDocumentType;
 use App\Http\Controllers\Controller;
+use App\Models\ApiEndpoint;
 use App\Repositories\Contracts\SearchRepositoryInterface;
+use App\Services\Docs\DocsEndpointVisibility;
 use App\Services\Portal\PortalContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +17,7 @@ class SearchController extends Controller
     public function __construct(
         private readonly SearchRepositoryInterface $search,
         private readonly PortalContext $portal,
+        private readonly DocsEndpointVisibility $endpointVisibility,
     ) {}
 
     public function __invoke(Request $request): JsonResponse
@@ -43,6 +46,7 @@ class SearchController extends Controller
 
         $results = $this->search
             ->search($query, $versionSlug, $limit)
+            ->filter(fn ($hit): bool => $this->hitVisibleTo($request->user(), $hit))
             ->map(function ($hit) use ($query): array {
                 $type = SearchDocumentType::tryFrom($hit->type);
 
@@ -61,6 +65,28 @@ class SearchController extends Controller
             'version' => $versionSlug,
             'results' => $results,
         ]);
+    }
+
+    private function hitVisibleTo(?\App\Models\User $user, object $hit): bool
+    {
+        if (($hit->type ?? null) !== SearchDocumentType::Endpoint->value) {
+            return true;
+        }
+
+        $url = $this->publicUrl($hit->url ?? null);
+        if (! filled($url) || ! preg_match('#/docs/[^/]+/endpoints/([^/?]+)#', $url, $matches)) {
+            return true;
+        }
+
+        $endpoint = ApiEndpoint::query()
+            ->where('slug', $matches[1])
+            ->first(['id', 'access_service_key']);
+
+        if (! $endpoint) {
+            return true;
+        }
+
+        return $this->endpointVisibility->canViewEndpoint($user, $endpoint);
     }
 
     /**

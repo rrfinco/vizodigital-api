@@ -14,6 +14,7 @@ use App\Models\EndpointExample;
 use App\Models\EndpointRequestBody;
 use App\Models\EndpointResponse;
 use App\Services\EkycHub\EkycHubCatalog;
+use App\Services\PlanApi\PlanApiService;
 use Illuminate\Database\Seeder;
 
 class PlanApiDocumentationSeeder extends Seeder
@@ -66,11 +67,16 @@ class PlanApiDocumentationSeeder extends Seeder
             'name' => 'Mobile Operator Find',
             'path' => '/api/v1/plan/operator-fetch',
             'summary' => 'Detect which operator a mobile number belongs to',
+            'access_service_key' => PlanApiService::SERVICE_OPERATOR_FETCH,
             'sort_order' => 1,
             'description_md' => <<<MD
 Verifies which telecom operator a mobile number belongs to and returns circle details.
 
-**Access & billing**
+**UAT vs Production**
+- **UAT** tokens (`environment: uat` via client-credentials) return a **sample** response. No aggregator call, **fee = 0**.
+- **Production** tokens call the live aggregator. Fee is deducted from your wallet.
+
+**Access & billing (Production)**
 - Admin must enable `operator_fetch` for your account and set a per-call fee.
 - Fee is deducted from your **developer wallet** before the provider call.
 - On provider failure, the fee is refunded automatically.
@@ -81,7 +87,7 @@ Verifies which telecom operator a mobile number belongs to and returns circle de
 {$circleMd}
 MD,
             'example_request' => [
-                'mobile' => '9468455123',
+                'mobile' => '9431023126',
                 'orderid' => 'OPF_001',
             ],
             'required' => ['mobile', 'orderid'],
@@ -91,16 +97,16 @@ MD,
             ],
             'example_response' => [
                 'status' => 'success',
-                'message' => 'Operator fetched Successfully',
+                'message' => 'UAT sample — operator fetched. Use production credentials for live aggregator data.',
                 'data' => [
-                    'number' => '9468455xxx',
-                    'company' => 'BSNL',
-                    'circle' => 'Haryana',
-                    'circle_code' => '96',
+                    'number' => '9431023xxx',
+                    'company' => 'Jio',
+                    'circle' => 'Bihar',
+                    'circle_code' => '52',
                     'orderid' => 'OPF_001',
                 ],
-                'fee' => 0.10,
-                'wallet_balance' => 999.90,
+                'fee' => 0,
+                'wallet_balance' => 1000.00,
             ],
         ]);
 
@@ -109,11 +115,14 @@ MD,
             'name' => 'Mobile Plan Fetch',
             'path' => '/api/v1/plan/operator-plan-fetch',
             'summary' => 'Fetch prepaid recharge plans for an operator and circle',
+            'access_service_key' => PlanApiService::SERVICE_OPERATOR_PLAN_FETCH,
             'sort_order' => 2,
             'description_md' => <<<MD
 Fetches available prepaid recharge plans (TOPUP, DATA, STV, etc.) for a mobile operator and circle.
 
 Use **operator find** first to get `company` / `circle_code`, then map to the opcode and circle values below.
+
+**UAT** returns sample TOPUP / DATA / STV packs (`fee = 0`, no aggregator hit). **Production** returns live plans and charges the configured fee.
 
 **Access & billing** same as Operator Find (`operator_plan_fetch` service key).
 
@@ -122,32 +131,40 @@ Use **operator find** first to get `company` / `circle_code`, then map to the op
 {$circleMd}
 MD,
             'example_request' => [
-                'mobile' => '9468455123',
-                'opcode' => 'BT',
-                'circle' => '96',
+                'mobile' => '9431023126',
+                'opcode' => 'J',
+                'circle' => '52',
                 'orderid' => 'PLN_001',
             ],
             'required' => ['mobile', 'opcode', 'circle', 'orderid'],
             'properties' => [
                 'mobile' => ['type' => 'string', 'description' => '10-digit mobile number'],
                 'opcode' => ['type' => 'string', 'description' => 'Operator code, e.g. A, V, J, BT, BS'],
-                'circle' => ['type' => 'string', 'description' => 'Circle code, e.g. 96 for Haryana'],
+                'circle' => ['type' => 'string', 'description' => 'Circle code, e.g. 52 for Bihar'],
                 'orderid' => ['type' => 'string', 'description' => 'Unique client order / request ID'],
             ],
             'example_response' => [
                 'status' => 'success',
-                'message' => 'Operator Plan Successfully',
+                'message' => 'UAT sample — prepaid plans. Use production credentials for live aggregator data.',
                 'data' => [
-                    'operator' => 'BSNL TOPUP',
+                    'operator' => 'Jio PREPAID',
                     'plans' => [
                         'TOPUP' => [
-                            ['rs' => 10, 'validity' => 'NA', 'desc' => 'Rs. 7.47 Talktime', 'Type' => 'talktime'],
+                            ['rs' => 10, 'validity' => 'NA', 'desc' => 'Sample talktime top-up (UAT)', 'Type' => 'talktime'],
+                            ['rs' => 20, 'validity' => 'NA', 'desc' => 'Sample talktime top-up (UAT)', 'Type' => 'talktime'],
+                        ],
+                        'DATA' => [
+                            ['rs' => 19, 'validity' => '1 Day', 'desc' => 'Sample 1GB data pack (UAT)', 'Type' => 'data'],
+                            ['rs' => 299, 'validity' => '28 Days', 'desc' => 'Sample 2GB/day data pack (UAT)', 'Type' => 'data'],
+                        ],
+                        'STV' => [
+                            ['rs' => 49, 'validity' => '28 Days', 'desc' => 'Sample unlimited calls STV (UAT)', 'Type' => 'stv'],
                         ],
                     ],
                     'orderid' => 'PLN_001',
                 ],
-                'fee' => 0.10,
-                'wallet_balance' => 999.80,
+                'fee' => 0,
+                'wallet_balance' => 1000.00,
             ],
         ]);
 
@@ -160,9 +177,12 @@ MD,
             'name' => 'DTH Plan Fetch',
             'path' => '/api/v1/plan/dth-plan-fetch',
             'summary' => 'Fetch DTH pack / plan information',
+            'access_service_key' => PlanApiService::SERVICE_DTH_PLAN_FETCH,
             'sort_order' => 3,
             'description_md' => <<<MD
 Fetches DTH plan packs for the given operator and subscriber number.
+
+**UAT** returns sample Combo / AddOn packs (`fee = 0`). **Production** hits the live aggregator.
 
 **Access & billing** same as Operator Find (`dth_plan_fetch` service key).
 
@@ -182,16 +202,22 @@ MD,
             ],
             'example_response' => [
                 'status' => 'success',
-                'message' => 'DTH Operator Plan Fetch Successfully',
+                'message' => 'UAT sample — DTH plans. Use production credentials for live aggregator data.',
                 'data' => [
-                    'operator' => 'AIRTEL DTH',
+                    'operator' => 'Airtel DTH',
                     'plans' => [
-                        'Combo' => [],
+                        'Combo' => [
+                            ['rs' => 299, 'validity' => '30 Days', 'desc' => 'Sample combo pack (UAT)', 'Type' => 'combo'],
+                            ['rs' => 499, 'validity' => '30 Days', 'desc' => 'Sample HD combo pack (UAT)', 'Type' => 'combo'],
+                        ],
+                        'AddOn' => [
+                            ['rs' => 50, 'validity' => '30 Days', 'desc' => 'Sample sports add-on (UAT)', 'Type' => 'addon'],
+                        ],
                     ],
                     'orderid' => 'DTHP_001',
                 ],
-                'fee' => 0.10,
-                'wallet_balance' => 999.70,
+                'fee' => 0,
+                'wallet_balance' => 1000.00,
             ],
         ]);
 
@@ -200,9 +226,12 @@ MD,
             'name' => 'DTH Customer Info',
             'path' => '/api/v1/plan/dth-info',
             'summary' => 'Fetch DTH customer info and account balance',
+            'access_service_key' => PlanApiService::SERVICE_DTH_INFO,
             'sort_order' => 4,
             'description_md' => <<<MD
 Fetches DTH customer name, balance, and minimum recharge for the given operator and subscriber number.
+
+**UAT** returns sample customer info (`fee = 0`). **Production** hits the live aggregator.
 
 **Access & billing** same as Operator Find (`dth_info` service key).
 
@@ -222,20 +251,20 @@ MD,
             ],
             'example_response' => [
                 'status' => 'success',
-                'message' => 'DTH customer info Successfully checked',
+                'message' => 'UAT sample — DTH customer info. Use production credentials for live aggregator data.',
                 'data' => [
                     'customer' => [
                         [
                             'VC' => '07210298754',
-                            'Name' => 'Sarfaraz Nawaz',
-                            'Balance' => '40.63',
+                            'Name' => 'UAT Sample Customer',
+                            'Balance' => '125.00',
                             'Minimum_recharge' => '200',
                         ],
                     ],
                     'orderid' => 'DTHI_001',
                 ],
-                'fee' => 0.10,
-                'wallet_balance' => 999.60,
+                'fee' => 0,
+                'wallet_balance' => 1000.00,
             ],
         ]);
 
@@ -274,7 +303,8 @@ MD,
      *   example_request: array<string, mixed>,
      *   required: list<string>,
      *   properties: array<string, array<string, mixed>>,
-     *   example_response: array<string, mixed>
+     *   example_response: array<string, mixed>,
+     *   access_service_key?: string|null
      * }  $config
      */
     private function seedEndpoint(ApiVersion $version, ApiGroup $group, $environments, array $config): void
@@ -292,6 +322,7 @@ MD,
                 'summary' => $config['summary'],
                 'description_md' => $config['description_md'],
                 'status' => PublishStatus::Published,
+                'access_service_key' => $config['access_service_key'] ?? null,
                 'rate_limit' => '60/min',
                 'sort_order' => $config['sort_order'],
             ]

@@ -31,7 +31,7 @@ class WhitelabelsTable
                     ->counts('domains')
                     ->label('Domains'),
                 TextColumn::make('wallet_balance')
-                    ->label('Float')
+                    ->label('Wallet')
                     ->money('INR')
                     ->sortable(),
                 TextColumn::make('status')

@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Whitelabels\Schemas;
 
 use App\Enums\WhitelabelStatus;
+use App\Models\User;
+use App\Models\Whitelabel;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -39,7 +41,7 @@ class WhitelabelForm
                             ->required()
                             ->default(WhitelabelStatus::Active->value),
                         TextInput::make('wallet_balance')
-                            ->label('Float balance')
+                            ->label('Wallet balance')
                             ->disabled()
                             ->dehydrated(false)
                             ->prefix('₹')
@@ -90,18 +92,33 @@ class WhitelabelForm
                             ->rule(Password::defaults())
                             ->columnSpanFull(),
                     ]),
-                Section::make('Owner')
+                Section::make('Owner login')
                     ->columns(2)
+                    ->description('Partner signs in at /partner with this email and password. Set a new password when you need to share credentials.')
                     ->visibleOn('edit')
                     ->schema([
-                        TextInput::make('owner.name')
+                        TextInput::make('owner_name')
                             ->label('Owner name')
-                            ->disabled()
-                            ->dehydrated(false),
-                        TextInput::make('owner.email')
+                            ->required()
+                            ->maxLength(255),
+                        TextInput::make('owner_email')
                             ->label('Owner email')
-                            ->disabled()
-                            ->dehydrated(false),
+                            ->email()
+                            ->required()
+                            ->maxLength(255)
+                            ->unique(
+                                table: 'users',
+                                column: 'email',
+                                ignorable: fn (?Whitelabel $record): ?User => $record?->owner,
+                            ),
+                        TextInput::make('owner_password')
+                            ->label('New password')
+                            ->password()
+                            ->revealable()
+                            ->rule(Password::defaults())
+                            ->helperText('Leave blank to keep the current password. Fill in to set a new one you can share with the partner.')
+                            ->dehydrated(fn (?string $state): bool => filled($state))
+                            ->columnSpanFull(),
                     ]),
             ]);
     }

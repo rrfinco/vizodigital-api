@@ -9,10 +9,15 @@ use App\Models\DocumentationPage;
 use App\Models\Faq;
 use App\Models\SdkPackage;
 use App\Repositories\Contracts\DocumentationRepositoryInterface;
+use App\Services\Docs\DocsEndpointVisibility;
 use Illuminate\Support\Collection;
 
 class DocumentationRepository implements DocumentationRepositoryInterface
 {
+    public function __construct(
+        private readonly DocsEndpointVisibility $endpointVisibility,
+    ) {}
+
     /**
      * @return list<string>
      */
@@ -52,13 +57,15 @@ class DocumentationRepository implements DocumentationRepositoryInterface
             return collect();
         }
 
-        return ApiCategory::query()
+        $tree = ApiCategory::query()
             ->published()
             ->where('api_version_id', $version->id)
             ->where('show_in_sidebar', true)
             ->with(['groups' => fn ($q) => $q->published()->with(['endpoints' => fn ($eq) => $eq->published()])])
             ->orderBy('sort_order')
             ->get();
+
+        return $this->endpointVisibility->filterCategoryTree($tree, auth()->user());
     }
 
     public function findPublishedPageBySlug(string $versionSlug, string $slug): ?DocumentationPage

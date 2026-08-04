@@ -2,6 +2,7 @@
 
 namespace App\Services\PlanApi;
 
+use App\Enums\EnvironmentSlug;
 use App\Exceptions\WhitelabelUnavailableException;
 use App\Models\User;
 use App\Models\UserPlanApiAccess;
@@ -22,6 +23,7 @@ class PlanApiService
 
     public function __construct(
         private readonly EkycHubService $ekycHub,
+        private readonly PlanApiUatMock $uatMock,
         private readonly WhitelabelBillingGate $whitelabelBillingGate,
     ) {}
 
@@ -31,8 +33,10 @@ class PlanApiService
      */
     public function operatorFetch(User $user, array $data): array
     {
-        return $this->execute($user, self::SERVICE_OPERATOR_FETCH, $data['orderid'], function () use ($data) {
-            return $this->ekycHub->operatorFetch($data);
+        return $this->execute($user, self::SERVICE_OPERATOR_FETCH, $data['orderid'], function () use ($user, $data) {
+            return $this->isUatToken($user)
+                ? $this->uatMock->operatorFetch($data)
+                : $this->ekycHub->operatorFetch($data);
         });
     }
 
@@ -42,8 +46,10 @@ class PlanApiService
      */
     public function operatorPlanFetch(User $user, array $data): array
     {
-        return $this->execute($user, self::SERVICE_OPERATOR_PLAN_FETCH, $data['orderid'], function () use ($data) {
-            return $this->ekycHub->operatorPlanFetch($data);
+        return $this->execute($user, self::SERVICE_OPERATOR_PLAN_FETCH, $data['orderid'], function () use ($user, $data) {
+            return $this->isUatToken($user)
+                ? $this->uatMock->operatorPlanFetch($data)
+                : $this->ekycHub->operatorPlanFetch($data);
         });
     }
 
@@ -53,8 +59,10 @@ class PlanApiService
      */
     public function dthPlanFetch(User $user, array $data): array
     {
-        return $this->execute($user, self::SERVICE_DTH_PLAN_FETCH, $data['orderid'], function () use ($data) {
-            return $this->ekycHub->dthPlanFetch($data);
+        return $this->execute($user, self::SERVICE_DTH_PLAN_FETCH, $data['orderid'], function () use ($user, $data) {
+            return $this->isUatToken($user)
+                ? $this->uatMock->dthPlanFetch($data)
+                : $this->ekycHub->dthPlanFetch($data);
         });
     }
 
@@ -64,8 +72,10 @@ class PlanApiService
      */
     public function dthInfo(User $user, array $data): array
     {
-        return $this->execute($user, self::SERVICE_DTH_INFO, $data['orderid'], function () use ($data) {
-            return $this->ekycHub->dthInfo($data);
+        return $this->execute($user, self::SERVICE_DTH_INFO, $data['orderid'], function () use ($user, $data) {
+            return $this->isUatToken($user)
+                ? $this->uatMock->dthInfo($data)
+                : $this->ekycHub->dthInfo($data);
         });
     }
 
@@ -82,6 +92,21 @@ class PlanApiService
 
         if (! $access || ! $access->isActive()) {
             throw new \RuntimeException('This API is not enabled for your account. Contact admin.');
+        }
+
+        // UAT tokens get sample data only — no aggregator hit, no wallet/float debit.
+        if ($this->isUatToken($user)) {
+            $provider = $call();
+
+            if (! $this->ekycHub->isSuccess($provider)) {
+                throw new \RuntimeException((string) ($provider['message'] ?? 'Request failed.'));
+            }
+
+            return [
+                'provider' => $provider,
+                'fee' => 0.0,
+                'wallet_balance' => (float) $user->fresh()->wallet_balance,
+            ];
         }
 
         $userFee = round((float) $access->per_call_fee, 2);
@@ -169,6 +194,11 @@ class PlanApiService
 
             throw $e;
         }
+    }
+
+    private function isUatToken(User $user): bool
+    {
+        return $user->tokenCan(EnvironmentSlug::Uat->tokenAbility());
     }
 
     private function refundFee(User $user, float $fee, string $service, string $orderid): void

@@ -10,6 +10,7 @@ use App\Models\ApiEndpoint;
 use App\Models\ApiEnvironment;
 use App\Repositories\Contracts\EnvironmentRepositoryInterface;
 use App\Services\Cms\DefaultApiGroupResolver;
+use App\Services\Docs\DocsEndpointVisibility;
 use App\Services\Environment\BaseUrlResolver;
 use Illuminate\Support\Collection;
 
@@ -19,6 +20,7 @@ class EndpointDocumentBuilder
         private readonly SectionRenderer $sections,
         private readonly BaseUrlResolver $baseUrls,
         private readonly EnvironmentRepositoryInterface $environments,
+        private readonly DocsEndpointVisibility $endpointVisibility,
     ) {}
 
     public function build(
@@ -76,8 +78,11 @@ class EndpointDocumentBuilder
                     return true;
                 }
 
-                return $related->status instanceof PublishStatus
-                    && $related->status->isPubliclyVisible();
+                if (! ($related->status instanceof PublishStatus && $related->status->isPubliclyVisible())) {
+                    return false;
+                }
+
+                return $this->endpointVisibility->canViewEndpoint(auth()->user(), $related);
             })
             ->map(function (ApiEndpoint $related): RelatedEndpointDto {
                 $versionSlug = $related->version?->slug ?? '';

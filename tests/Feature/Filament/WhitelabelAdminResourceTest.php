@@ -6,7 +6,9 @@ use App\Enums\Role;
 use App\Enums\WhitelabelStatus;
 use App\Filament\Resources\WhitelabelFloatRequests\Pages\ViewWhitelabelFloatRequest;
 use App\Filament\Resources\Whitelabels\Pages\CreateWhitelabel;
+use App\Filament\Resources\Whitelabels\Pages\EditWhitelabel;
 use App\Filament\Resources\Whitelabels\Pages\ListWhitelabels;
+use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\Whitelabel;
 use App\Models\WhitelabelFloatRequest;
@@ -73,6 +75,63 @@ class WhitelabelAdminResourceTest extends TestCase
         $this->assertTrue($owner->hasRole(Role::Whitelabel->value));
         $this->assertNotNull($owner->whitelabel_id);
         $this->assertSame($owner->id, Whitelabel::query()->where('slug', 'acme-partner')->value('owner_user_id'));
+    }
+
+    public function test_admin_can_update_owner_credentials_on_edit(): void
+    {
+        $wl = Whitelabel::factory()->create();
+        $owner = User::factory()->forWhitelabel($wl->id)->create([
+            'name' => 'Old Owner',
+            'email' => 'old@partner.test',
+            'password' => 'OldPassword1!',
+        ]);
+        $owner->assignRole(Role::Whitelabel->value);
+        $wl->update(['owner_user_id' => $owner->id]);
+
+        Livewire::actingAs($this->admin)
+            ->test(EditWhitelabel::class, ['record' => $wl->getKey()])
+            ->assertFormSet([
+                'owner_name' => 'Old Owner',
+                'owner_email' => 'old@partner.test',
+            ])
+            ->fillForm([
+                'owner_name' => 'New Owner',
+                'owner_email' => 'new@partner.test',
+                'owner_password' => 'NewPassword1!',
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $owner->refresh();
+        $this->assertSame('New Owner', $owner->name);
+        $this->assertSame('new@partner.test', $owner->email);
+        $this->assertTrue(Hash::check('NewPassword1!', $owner->password));
+    }
+
+    public function test_admin_can_update_owner_without_changing_password(): void
+    {
+        $wl = Whitelabel::factory()->create();
+        $owner = User::factory()->forWhitelabel($wl->id)->create([
+            'name' => 'Keep Pass',
+            'email' => 'keep@partner.test',
+            'password' => 'KeepPassword1!',
+        ]);
+        $owner->assignRole(Role::Whitelabel->value);
+        $wl->update(['owner_user_id' => $owner->id]);
+        $originalHash = $owner->password;
+
+        Livewire::actingAs($this->admin)
+            ->test(EditWhitelabel::class, ['record' => $wl->getKey()])
+            ->fillForm([
+                'owner_name' => 'Keep Pass Updated',
+                'owner_email' => 'keep@partner.test',
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $owner->refresh();
+        $this->assertSame('Keep Pass Updated', $owner->name);
+        $this->assertSame($originalHash, $owner->password);
     }
 
     public function test_developer_cannot_access_whitelabel_admin(): void

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web\Docs;
 
 use App\Http\Controllers\Controller;
 use App\Repositories\Contracts\ApiEndpointRepositoryInterface;
+use App\Services\Docs\DocsEndpointVisibility;
 use App\Services\Portal\PortalContext;
 use App\Services\Rendering\EndpointDocumentBuilder;
 use App\Services\Rendering\SectionRenderer;
@@ -18,6 +19,7 @@ class ShowEndpointController extends Controller
         private readonly EndpointDocumentBuilder $documents,
         private readonly SectionRenderer $renderer,
         private readonly PortalContext $portal,
+        private readonly DocsEndpointVisibility $endpointVisibility,
     ) {}
 
     public function __invoke(Request $request, string $version, string $endpoint): View
@@ -26,6 +28,10 @@ class ShowEndpointController extends Controller
 
         if (! $record) {
             throw new NotFoundHttpException('This endpoint is not published.');
+        }
+
+        if (! $this->endpointVisibility->canViewEndpoint($request->user(), $record)) {
+            throw new NotFoundHttpException('This endpoint is not available for your account.');
         }
 
         return view('docs.endpoints.show', [

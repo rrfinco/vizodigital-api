@@ -29,6 +29,7 @@ class ApiEndpoint extends Model
         'description_md',
         'status',
         'permission_name',
+        'access_service_key',
         'rate_limit',
         'sort_order',
         'published_at',

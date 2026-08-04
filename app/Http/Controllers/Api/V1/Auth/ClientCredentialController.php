@@ -45,7 +45,7 @@ class ClientCredentialController extends Controller
         $user = $credential->user;
         $token = $user->createToken(
             $validated['device_name'] ?? strtoupper($slug->value).'-api',
-            ['*']
+            ['*', $slug->tokenAbility()]
         );
 
         return response()->json([

@@ -22,4 +22,9 @@ enum EnvironmentSlug: string
             self::Production => 'Live',
         };
     }
+
+    public function tokenAbility(): string
+    {
+        return 'environment:'.$this->value;
+    }
 }

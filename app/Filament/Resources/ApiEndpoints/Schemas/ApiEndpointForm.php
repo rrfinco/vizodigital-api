@@ -77,6 +77,17 @@ class ApiEndpointForm
                             ->label('Description')
                             ->columnSpanFull(),
                         PublishStatusField::make(),
+                        Select::make('access_service_key')
+                            ->label('Docs access gate')
+                            ->helperText('If set, this endpoint only appears in docs for developers with matching Plan API access Active.')
+                            ->options([
+                                'operator_fetch' => 'Mobile operator find (operator_fetch)',
+                                'operator_plan_fetch' => 'Mobile plan fetch (operator_plan_fetch)',
+                                'dth_plan_fetch' => 'DTH plan fetch (dth_plan_fetch)',
+                                'dth_info' => 'DTH customer info (dth_info)',
+                            ])
+                            ->searchable()
+                            ->nullable(),
                         TextInput::make('sort_order')
                             ->numeric()
                             ->default(0)

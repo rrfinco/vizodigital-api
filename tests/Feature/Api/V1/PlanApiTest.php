@@ -11,6 +11,7 @@ use App\Models\WalletTransaction;
 use App\Services\PlanApi\PlanApiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class PlanApiTest extends TestCase
@@ -395,5 +396,51 @@ class PlanApiTest extends TestCase
 
         $this->assertSame(50.0, (float) $developer->fresh()->wallet_balance);
         $this->assertSame(100.0, (float) $whitelabel->fresh()->wallet_balance);
+    }
+
+    public function test_uat_token_returns_mock_operator_without_http_or_fee(): void
+    {
+        $this->enableService(PlanApiService::SERVICE_OPERATOR_FETCH, 0.10);
+        Sanctum::actingAs($this->user, ['*', 'environment:uat']);
+
+        Http::fake();
+
+        $this->postJson(route('api.v1.plan.operator-fetch'), [
+            'mobile' => '9431023126',
+            'orderid' => 'OPF_UAT',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.company', 'Jio')
+            ->assertJsonPath('data.circle_code', '52')
+            ->assertJsonPath('fee', 0)
+            ->assertJsonPath('wallet_balance', 100);
+
+        $this->assertEquals(100.0, (float) $this->user->fresh()->wallet_balance);
+        $this->assertSame(0, WalletTransaction::query()->count());
+        Http::assertNothingSent();
+    }
+
+    public function test_uat_token_returns_mock_plans_without_http_or_fee(): void
+    {
+        $this->enableService(PlanApiService::SERVICE_OPERATOR_PLAN_FETCH, 0.25);
+        Sanctum::actingAs($this->user, ['*', 'environment:uat']);
+
+        Http::fake();
+
+        $this->postJson(route('api.v1.plan.operator-plan-fetch'), [
+            'mobile' => '9431023126',
+            'opcode' => 'J',
+            'circle' => '52',
+            'orderid' => 'PLN_UAT',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.operator', 'Jio PREPAID')
+            ->assertJsonPath('data.plans.TOPUP.0.rs', 10)
+            ->assertJsonPath('fee', 0);
+
+        Http::assertNothingSent();
+        $this->assertSame(0, WalletTransaction::query()->count());
     }
 }

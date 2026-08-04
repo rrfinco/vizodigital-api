@@ -56,20 +56,28 @@ POST /api/v1/auth/client-credentials
 Content-Type: application/json
 
 {
-  "client_id": "uat_client_...",
-  "api_secret": "...",
-  "environment": "uat"
+  "client_id": "uat_client_portal_user",
+  "api_secret": "uat_secret_••••••••",
+  "environment": "uat",
+  "device_name": "uat-live-test"
 }
 ```
+
+`device_name` is optional. Field name is `api_secret` (not `client_secret`).
 
 Example success response:
 
 ```json
 {
-  "token": "1|xxxxxxxx",
+  "token": "1|xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
   "token_type": "Bearer",
   "environment": "uat",
-  "base_url": "https://..."
+  "base_url": "https://uat-api.vizodigital.com",
+  "user": {
+    "id": 4,
+    "name": "Portal User",
+    "email": "user@portal.test"
+  }
 }
 ```
 
@@ -77,6 +85,26 @@ Send the token on every business API call:
 
 ```http
 Authorization: Bearer {token}
+```
+
+## Verify the token
+
+```http
+GET /api/v1/auth/me
+Authorization: Bearer {token}
+Accept: application/json
+```
+
+Example response:
+
+```json
+{
+  "id": 4,
+  "name": "Portal User",
+  "email": "user@portal.test",
+  "roles": ["developer"],
+  "permissions": ["api-keys.manage"]
+}
 ```
 
 ## Environment rules
