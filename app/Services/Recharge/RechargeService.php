@@ -97,7 +97,8 @@ class RechargeService
         }
 
         // 4. Generate system API request ID
-        $apiRequestId = 'RC_'.date('YmdHis').'_'.bin2hex(random_bytes(5));
+        // Roundpay rejects APIRequestID longer than 25 characters.
+        $apiRequestId = 'RC'.date('ymdHis').bin2hex(random_bytes(4));
 
         // 5. Debit developer + WL float (lock WL then user)
         /** @var RechargeTransaction $rechargeTxn */
