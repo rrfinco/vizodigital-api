@@ -297,4 +297,40 @@ class RechargeTest extends TestCase
 
         $response->assertStatus(200);
     }
+
+    public function test_recharge_rejects_duplicate_client_request_id_for_same_user(): void
+    {
+        $this->actingAs($this->user, 'sanctum');
+
+        Http::fake([
+            'api.roundpay.net/*' => Http::response([
+                'STATUS' => '2',
+                'MSG' => 'SUCCESS',
+                'BAL' => '1000',
+                'ERRORCODE' => '200',
+                'RPID' => 'RPID_DUP_1',
+                'OPID' => 'OPID_DUP_1',
+            ], 200),
+        ]);
+
+        $payload = [
+            'account_number' => '9876543210',
+            'amount' => 10,
+            'operator_sp_key' => 116,
+            'operator_type' => 'mobile',
+            'client_request_id' => 'UNIQUE_ORDER_42',
+        ];
+
+        $this->postJson(route('api.v1.recharge'), $payload)
+            ->assertOk()
+            ->assertJsonPath('status', 'success');
+
+        $this->postJson(route('api.v1.recharge'), $payload)
+            ->assertStatus(422)
+            ->assertJsonPath('status', 'error')
+            ->assertJsonPath('message', 'This client_request_id was already used. Provide a unique order ID.');
+
+        $this->assertSame(1, RechargeTransaction::query()->where('client_request_id', 'UNIQUE_ORDER_42')->count());
+        Http::assertSentCount(1);
+    }
 }

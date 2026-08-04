@@ -79,6 +79,12 @@ class RechargeController extends Controller
 
         } catch (WhitelabelUnavailableException $e) {
             return $e->toJsonResponse();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => collect($e->errors())->flatten()->first() ?: 'Validation error',
+                'errors' => $e->errors(),
+            ], 422);
         } catch (\Throwable $e) {
             return response()->json([
                 'status' => 'error',

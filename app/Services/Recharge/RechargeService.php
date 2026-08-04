@@ -11,6 +11,7 @@ use App\Models\WhitelabelOperatorCommission;
 use App\Services\Whitelabel\WhitelabelBillingGate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class RechargeService
 {
@@ -43,10 +44,24 @@ class RechargeService
         $amount = (float) $data['amount'];
         $spKey = (int) $data['operator_sp_key'];
         $type = strtolower($data['operator_type']); // mobile or dth
-        $clientRequestId = $data['client_request_id'] ?? null;
+        $clientRequestId = isset($data['client_request_id']) ? trim((string) $data['client_request_id']) : null;
+        $clientRequestId = $clientRequestId === '' ? null : $clientRequestId;
         $geocode = $data['geocode'] ?? null;
         $customerNumber = $data['customer_number'] ?? null;
         $pincode = $data['pincode'] ?? null;
+
+        if ($clientRequestId !== null) {
+            $duplicate = RechargeTransaction::query()
+                ->where('user_id', $user->id)
+                ->where('client_request_id', $clientRequestId)
+                ->exists();
+
+            if ($duplicate) {
+                throw ValidationException::withMessages([
+                    'client_request_id' => 'This client_request_id was already used. Provide a unique order ID.',
+                ]);
+            }
+        }
 
         // 1. Operator validation
         $operator = $this->findOperator($spKey, $type);
