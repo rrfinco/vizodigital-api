@@ -1,9 +1,9 @@
 <x-filament-widgets::widget>
     <x-filament::section>
-        <x-slot name="heading">Recent float activity</x-slot>
+        <x-slot name="heading">Recent wallet transactions</x-slot>
 
         @if ($transactions->isEmpty())
-            <p class="text-sm text-gray-500 dark:text-gray-400">No float ledger entries yet.</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400">No wallet transactions yet.</p>
         @else
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">

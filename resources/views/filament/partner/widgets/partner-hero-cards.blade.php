@@ -14,7 +14,7 @@
         <article class="dev-hero-card dev-hero-card--wallet">
             <div class="dev-hero-card__row">
                 <div>
-                    <p class="dev-hero-card__label">Float balance</p>
+                    <p class="dev-hero-card__label">Wallet balance</p>
                     <p class="dev-hero-card__metric">₹{{ number_format($floatBalance, 2) }}</p>
                 </div>
             </div>
@@ -30,7 +30,7 @@
                 </div>
             </div>
             <p class="dev-hero-card__sub">
-                Pending KYC: {{ $pendingKyc }} · Pending float: {{ $pendingFloat }}
+                Pending KYC: {{ $pendingKyc }} · Pending top-ups: {{ $pendingFloat }}
             </p>
         </article>
     </div>

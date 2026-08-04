@@ -26,9 +26,9 @@ class FloatWallet extends Page
 
     protected static ?int $navigationSort = 20;
 
-    protected static ?string $navigationLabel = 'Float wallet';
+    protected static ?string $navigationLabel = 'Wallet';
 
-    protected static ?string $title = 'Float wallet';
+    protected static ?string $title = 'Wallet';
 
     protected string $view = 'filament.partner.pages.float-wallet';
 
@@ -121,7 +121,7 @@ class FloatWallet extends Page
             $this->reset(['amount', 'utr', 'proof']);
 
             Notification::make()
-                ->title('Float request submitted')
+                ->title('Wallet top-up request submitted')
                 ->body('Platform admin will review and credit your float after verification.')
                 ->success()
                 ->send();

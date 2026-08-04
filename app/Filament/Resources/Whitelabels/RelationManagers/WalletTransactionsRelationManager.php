@@ -10,7 +10,7 @@ class WalletTransactionsRelationManager extends RelationManager
 {
     protected static string $relationship = 'walletTransactions';
 
-    protected static ?string $title = 'Float ledger';
+    protected static ?string $title = 'Wallet transactions';
 
     public function isReadOnly(): bool
     {

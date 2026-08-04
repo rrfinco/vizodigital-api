@@ -14,7 +14,7 @@
                 ₹{{ number_format($this->planApiMarginEarned(), 2) }}
             </p>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Total credited to float as Plan API margin (user fee − your cost). Details also appear in Float wallet ledger.
+                Total credited to float as Plan API margin (user fee − your cost). Details also appear in wallet transactions.
             </p>
         </x-filament::section>
 

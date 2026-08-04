@@ -38,7 +38,7 @@ class ViewWhitelabelFloatRequest extends ViewRecord
                         $this->record->refresh();
 
                         Notification::make()
-                            ->title('Float request approved')
+                            ->title('Wallet top-up request approved')
                             ->body('White-label float has been credited.')
                             ->success()
                             ->send();
@@ -70,7 +70,7 @@ class ViewWhitelabelFloatRequest extends ViewRecord
                         $this->record->refresh();
 
                         Notification::make()
-                            ->title('Float request rejected')
+                            ->title('Wallet top-up request rejected')
                             ->warning()
                             ->send();
                     } catch (\Throwable $e) {

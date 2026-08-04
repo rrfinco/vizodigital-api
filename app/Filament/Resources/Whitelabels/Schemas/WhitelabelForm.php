@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Whitelabels\Schemas;
 
 use App\Enums\WhitelabelStatus;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
@@ -53,10 +54,17 @@ class WhitelabelForm
                             ->label('Primary color')
                             ->placeholder('#0F766E')
                             ->maxLength(32),
-                        TextInput::make('logo_path')
-                            ->label('Logo path')
-                            ->helperText('Public disk path or URL (upload UI later).')
-                            ->maxLength(255)
+                        FileUpload::make('logo_path')
+                            ->label('Logo')
+                            ->image()
+                            ->imageEditor()
+                            ->disk('public')
+                            ->directory('whitelabel-logos')
+                            ->visibility('public')
+                            ->imagePreviewHeight('120')
+                            ->maxSize(2048)
+                            ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml'])
+                            ->helperText('PNG, JPG, WebP or SVG. Max 2 MB. Shown on the partner portal and docs.')
                             ->columnSpanFull(),
                     ]),
                 Section::make('Owner account')

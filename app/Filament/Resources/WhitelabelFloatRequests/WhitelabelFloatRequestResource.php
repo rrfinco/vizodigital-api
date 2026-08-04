@@ -25,7 +25,7 @@ class WhitelabelFloatRequestResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'id';
 
-    protected static ?string $slug = 'whitelabel-float-requests';
+    protected static ?string $slug = 'wallet-top-up-requests';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
 
@@ -33,11 +33,11 @@ class WhitelabelFloatRequestResource extends Resource
 
     protected static ?int $navigationSort = 20;
 
-    protected static ?string $navigationLabel = 'Float requests';
+    protected static ?string $navigationLabel = 'Wallet top-up requests';
 
-    protected static ?string $modelLabel = 'float request';
+    protected static ?string $modelLabel = 'wallet top-up request';
 
-    protected static ?string $pluralModelLabel = 'float requests';
+    protected static ?string $pluralModelLabel = 'wallet top-up requests';
 
     public static function getNavigationBadge(): ?string
     {

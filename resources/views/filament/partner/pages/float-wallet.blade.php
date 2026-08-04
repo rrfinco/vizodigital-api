@@ -5,18 +5,18 @@
 
     <div class="space-y-6">
         <x-filament::section>
-            <x-slot name="heading">Current float</x-slot>
+            <x-slot name="heading">Current wallet balance</x-slot>
             <p class="text-3xl font-semibold tracking-tight text-gray-950 dark:text-white">
                 ₹{{ number_format((float) ($wl?->wallet_balance ?? 0), 2) }}
             </p>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                When float is empty, your developers’ APIs return service unavailable — even if their wallets have balance.
+                When this balance is empty, your developers’ APIs return service unavailable — even if their wallets have balance.
             </p>
         </x-filament::section>
 
         <x-filament::section>
-            <x-slot name="heading">Request float top-up</x-slot>
-            <x-slot name="description">Submit bank transfer details. SuperAdmin will approve and credit float.</x-slot>
+            <x-slot name="heading">Request wallet top-up</x-slot>
+            <x-slot name="description">Submit bank transfer details. Admin will approve and credit your wallet.</x-slot>
 
             <form wire:submit.prevent="submitFloatRequest" class="space-y-4 max-w-xl">
                 <div>
@@ -70,10 +70,10 @@
             </x-filament::section>
 
             <x-filament::section>
-                <x-slot name="heading">Ledger</x-slot>
+                <x-slot name="heading">Wallet transactions</x-slot>
                 @php $ledger = $this->getRecentLedger(); @endphp
                 @if ($ledger->isEmpty())
-                    <p class="text-sm text-gray-500">No ledger entries yet.</p>
+                    <p class="text-sm text-gray-500">No wallet transactions yet.</p>
                 @else
                     <ul class="divide-y divide-gray-100 dark:divide-white/10">
                         @foreach ($ledger as $tx)
