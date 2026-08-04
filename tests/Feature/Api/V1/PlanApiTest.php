@@ -139,7 +139,8 @@ class PlanApiTest extends TestCase
             'orderid' => 'OPF_LOW',
         ])
             ->assertStatus(400)
-            ->assertJsonPath('status', 'error');
+            ->assertJsonPath('status', 'error')
+            ->assertJsonPath('message', 'Insufficient wallet balance. Please recharge your wallet. Required: ₹0.1, Available: ₹0.05');
 
         $this->assertEquals(0.05, (float) $this->user->fresh()->wallet_balance);
         $this->assertSame(0, WalletTransaction::query()->count());
@@ -304,5 +305,95 @@ class PlanApiTest extends TestCase
 
         $this->assertEquals(100.0, (float) $this->user->fresh()->wallet_balance);
         $this->assertSame(0, WalletTransaction::query()->count());
+    }
+
+    public function test_whitelabel_plan_api_debits_user_fee_and_credits_wl_margin(): void
+    {
+        $whitelabel = \App\Models\Whitelabel::factory()->withFloat(100)->create();
+        $developer = User::factory()->forWhitelabel($whitelabel->id)->create([
+            'wallet_balance' => 50,
+            'onboarding_status' => OnboardingStatus::Approved,
+        ]);
+        $developer->assignRole(Role::Developer->value);
+
+        \App\Models\WhitelabelPlanApiAccess::query()->create([
+            'whitelabel_id' => $whitelabel->id,
+            'service' => PlanApiService::SERVICE_OPERATOR_FETCH,
+            'per_call_fee' => 0.10,
+            'status' => true,
+        ]);
+
+        UserPlanApiAccess::query()->create([
+            'user_id' => $developer->id,
+            'service' => PlanApiService::SERVICE_OPERATOR_FETCH,
+            'per_call_fee' => 0.15,
+            'status' => true,
+        ]);
+
+        $this->actingAs($developer, 'sanctum');
+
+        Http::fake([
+            'connect.ekychub.in/*' => Http::response([
+                'status' => 'Success',
+                'number' => '9468455xxx',
+                'company' => 'BSNL',
+                'circle' => 'Haryana',
+                'circle_code' => '96',
+                'message' => 'Operator fetched Successfully',
+            ], 200),
+        ]);
+
+        $this->postJson(route('api.v1.plan.operator-fetch'), [
+            'mobile' => '9468455123',
+            'orderid' => 'OPF_WL_MARGIN',
+        ])
+            ->assertOk()
+            ->assertJsonPath('fee', 0.15)
+            ->assertJsonPath('wallet_balance', 49.85);
+
+        // User: 50 - 0.15
+        $this->assertSame(49.85, (float) $developer->fresh()->wallet_balance);
+        // WL: 100 - 0.15 + 0.05 margin = 99.90
+        $this->assertSame(99.90, (float) $whitelabel->fresh()->wallet_balance);
+
+        $this->assertDatabaseHas('whitelabel_wallet_transactions', [
+            'whitelabel_id' => $whitelabel->id,
+            'type' => 'debit',
+            'amount' => -0.15,
+        ]);
+        $this->assertDatabaseHas('whitelabel_wallet_transactions', [
+            'whitelabel_id' => $whitelabel->id,
+            'type' => 'credit',
+            'amount' => 0.05,
+        ]);
+    }
+
+    public function test_whitelabel_plan_api_inactive_wl_service_returns_503(): void
+    {
+        $whitelabel = \App\Models\Whitelabel::factory()->withFloat(100)->create();
+        $developer = User::factory()->forWhitelabel($whitelabel->id)->create([
+            'wallet_balance' => 50,
+            'onboarding_status' => OnboardingStatus::Approved,
+        ]);
+        $developer->assignRole(Role::Developer->value);
+
+        UserPlanApiAccess::query()->create([
+            'user_id' => $developer->id,
+            'service' => PlanApiService::SERVICE_OPERATOR_FETCH,
+            'per_call_fee' => 0.15,
+            'status' => true,
+        ]);
+
+        $this->actingAs($developer, 'sanctum');
+
+        $this->postJson(route('api.v1.plan.operator-fetch'), [
+            'mobile' => '9468455123',
+            'orderid' => 'OPF_WL_OFF',
+        ])
+            ->assertStatus(503)
+            ->assertJsonPath('code', 'SERVICE_UNAVAILABLE');
+
+        $this->assertSame(50.0, (float) $developer->fresh()->wallet_balance);
+        $this->assertSame(100.0, (float) $whitelabel->fresh()->wallet_balance);
     }
 }

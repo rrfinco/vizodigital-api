@@ -3,7 +3,11 @@
 namespace App\Services\Portal;
 
 use App\Models\Setting;
+use App\Models\Whitelabel;
+use App\Services\Whitelabel\WhitelabelContext;
+use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 class PortalSettings
 {
@@ -24,16 +28,28 @@ class PortalSettings
 
     public function name(): string
     {
+        if ($name = $this->whitelabelBrandName()) {
+            return $name;
+        }
+
         return (string) ($this->branding()['name'] ?? config('portal.name'));
     }
 
     public function tagline(): string
     {
+        if ($this->whitelabelBrand()) {
+            return 'API platform';
+        }
+
         return (string) ($this->branding()['tagline'] ?? config('portal.tagline'));
     }
 
     public function logoText(): string
     {
+        if ($name = $this->whitelabelBrandName()) {
+            return $name;
+        }
+
         return (string) ($this->branding()['logo_text'] ?? config('portal.brand.logo_text'));
     }
 
@@ -44,12 +60,60 @@ class PortalSettings
 
     public function logoUrl(): string
     {
+        if ($wl = $this->whitelabelBrand()) {
+            $path = $wl->logo_path;
+            if (filled($path)) {
+                if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                    return $path;
+                }
+
+                if (Storage::disk('public')->exists($path)) {
+                    return Storage::disk('public')->url($path);
+                }
+
+                return asset($path);
+            }
+        }
+
         return asset($this->logoPath());
     }
 
     public function logoHeight(): string
     {
         return (string) config('portal.brand.logo_height', '2rem');
+    }
+
+    public function primaryColor(): ?string
+    {
+        $color = $this->whitelabelBrand()?->primary_color;
+
+        return filled($color) ? (string) $color : null;
+    }
+
+    /**
+     * Active white-label branding for the current host (not applied on admin panel).
+     */
+    public function whitelabelBrand(): ?Whitelabel
+    {
+        try {
+            if (Filament::getCurrentPanel()?->getId() === 'admin') {
+                return null;
+            }
+        } catch (\Throwable) {
+            // Filament not booted.
+        }
+
+        return app(WhitelabelContext::class)->whitelabel();
+    }
+
+    public function whitelabelBrandName(): ?string
+    {
+        $wl = $this->whitelabelBrand();
+        if (! $wl) {
+            return null;
+        }
+
+        return $wl->brand_name ?: $wl->name;
     }
 
     /**

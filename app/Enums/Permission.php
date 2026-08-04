@@ -25,6 +25,12 @@ enum Permission: string
     case KycManage = 'kyc.manage';
     case AnalyticsView = 'analytics.view';
 
+    case WhitelabelsManage = 'whitelabels.manage';
+    case WhitelabelFloatManage = 'whitelabel-float.manage';
+    case WhitelabelKycManage = 'whitelabel-kyc.manage';
+    case WhitelabelFloatRequest = 'whitelabel-float.request';
+    case WhitelabelCommissionsManage = 'whitelabel-commissions.manage';
+
     public function label(): string
     {
         return str_replace(['.', '_'], [' ', ' '], $this->value);
@@ -53,6 +59,21 @@ enum Permission: string
             self::ApiKeysManage,
             self::KycManage,
             self::AnalyticsView,
+            self::WhitelabelsManage,
+            self::WhitelabelFloatManage,
+        ];
+    }
+
+    /**
+     * @return list<self>
+     */
+    public static function whitelabelPermissions(): array
+    {
+        return [
+            self::WhitelabelKycManage,
+            self::WhitelabelFloatRequest,
+            self::WhitelabelCommissionsManage,
+            self::ApiKeysManage,
         ];
     }
 }

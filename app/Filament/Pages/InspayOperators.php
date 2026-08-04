@@ -2,7 +2,9 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\Role;
 use App\Filament\Concerns\InteractsWithInspayOperators;
+use App\Models\User;
 use BackedEnum;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -27,4 +29,25 @@ class InspayOperators extends Page
     protected static ?string $slug = 'inspay-operators';
 
     protected string $view = 'filament.pages.inspay-operators';
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->can('users.manage') ?? false;
+    }
+
+    public function mount(): void
+    {
+        $first = User::query()
+            ->role(Role::Developer->value)
+            ->orderBy('name')
+            ->first();
+
+        $this->selectedUserId = $first?->id;
+        $this->hydrateCommissionRows();
+    }
+
+    public function canManageCommissions(): bool
+    {
+        return true;
+    }
 }

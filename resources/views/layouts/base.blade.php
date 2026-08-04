@@ -7,6 +7,10 @@
 
     <title>@yield('title', app(\App\Services\Portal\PortalSettings::class)->name())</title>
     <link rel="icon" href="{{ asset('images/brand/vizo-icon.jpg') }}" type="image/jpeg">
+    @php $wlPrimary = app(\App\Services\Portal\PortalSettings::class)->primaryColor(); @endphp
+    @if ($wlPrimary)
+        <style>:root { --portal-primary: {{ $wlPrimary }}; --color-primary-600: {{ $wlPrimary }}; }</style>
+    @endif
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700&display=swap" rel="stylesheet" />

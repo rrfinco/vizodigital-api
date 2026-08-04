@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Middleware\RejectPortalWebWhenApiOnly;
+use App\Http\Middleware\ResolveWhitelabelFromHost;
+use App\Http\Middleware\RedirectWhitelabelRootToPartner;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,6 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         $middleware->statefulApi();
+
+        // Resolve white-label tenant from Host (same codebase, per-brand experience).
+        $middleware->append(ResolveWhitelabelFromHost::class);
+        $middleware->append(RedirectWhitelabelRootToPartner::class);
 
         // Runs on web + Filament so UAT cannot expose docs/onboarding panels.
         $middleware->append(RejectPortalWebWhenApiOnly::class);

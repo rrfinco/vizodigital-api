@@ -24,6 +24,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(\App\Services\Portal\PortalContext::class);
         $this->app->singleton(\App\Services\Portal\PortalSettings::class);
+        $this->app->singleton(\App\Services\Whitelabel\WhitelabelContext::class);
     }
 
     public function boot(): void

@@ -13,7 +13,14 @@ use Illuminate\Support\Str;
 class RegisterDeveloper
 {
     /**
-     * @param  array{name: string, email: string, password: string, company_name?: string|null, phone?: string|null}  $data
+     * @param  array{
+     *     name: string,
+     *     email: string,
+     *     password: string,
+     *     company_name?: string|null,
+     *     phone?: string|null,
+     *     whitelabel_id?: int|null
+     * }  $data
      */
     public function handle(array $data): User
     {
@@ -24,6 +31,7 @@ class RegisterDeveloper
                 'password' => $data['password'],
                 'company_name' => $data['company_name'] ?? null,
                 'phone' => $data['phone'] ?? null,
+                'whitelabel_id' => $data['whitelabel_id'] ?? null,
                 'onboarding_status' => OnboardingStatus::PendingKyc,
                 'kyc_token' => Str::random(64),
                 'kyc_token_expires_at' => now()->addDays(7),

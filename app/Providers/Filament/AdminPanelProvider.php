@@ -3,7 +3,9 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Concerns\ConfiguresCrmPanelLayout;
-use Filament\Http\Middleware\Authenticate;
+use App\Http\Middleware\ClearIncompatibleFilamentSession;
+use App\Http\Middleware\EnsurePlatformAdminHost;
+use App\Http\Middleware\FilamentAuthenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -47,6 +49,7 @@ class AdminPanelProvider extends PanelProvider
             ->navigationGroups([
                 NavigationGroup::make('Documentation CMS')->collapsible(),
                 NavigationGroup::make('System')->collapsible(),
+                NavigationGroup::make('White-label')->collapsible(),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
@@ -58,6 +61,7 @@ class AdminPanelProvider extends PanelProvider
                 AccountWidget::class,
             ])
             ->middleware([
+                EnsurePlatformAdminHost::class,
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
                 StartSession::class,
@@ -67,9 +71,10 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                ClearIncompatibleFilamentSession::class,
             ])
             ->authMiddleware([
-                Authenticate::class,
+                FilamentAuthenticate::class,
             ]);
 
         return $this->configureCrmLayout($panel, 'ADMIN portal');

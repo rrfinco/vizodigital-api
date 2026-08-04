@@ -44,6 +44,11 @@ class RolePermissionSeeder extends Seeder
             PermissionEnum::AnalyticsView->value,
         ]);
 
+        Role::findOrCreate(RoleEnum::Whitelabel->value, 'web')
+            ->syncPermissions(
+                collect(PermissionEnum::whitelabelPermissions())->map->value->all()
+            );
+
         Role::findOrCreate(RoleEnum::Developer->value, 'web')
             ->syncPermissions([
                 PermissionEnum::ApiKeysManage->value,

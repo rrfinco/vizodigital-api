@@ -6,6 +6,7 @@ use App\Enums\Role;
 use App\Filament\Pages\InspayOperators as AdminInspayOperators;
 use App\Filament\User\Pages\InspayOperators as UserInspayOperators;
 use App\Models\User;
+use App\Models\UserBillOperatorCommission;
 use App\Services\Inspay\InspayOperatorCatalog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -132,5 +133,80 @@ class UserPanelInspayOperatorsTest extends TestCase
             ->assertSee('InsPay Operator Codes')
             ->call('selectCategory', 'Fastag')
             ->assertSet('category', 'Fastag');
+    }
+
+    public function test_admin_can_save_flat_and_percentage_commissions(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole(Role::Admin->value);
+
+        $developer = User::factory()->create(['name' => 'Dev One']);
+        $developer->assignRole(Role::Developer->value);
+
+        $catalog = app(InspayOperatorCatalog::class);
+        $first = $catalog->search(category: 'Credit Card')->first();
+        $this->assertNotNull($first);
+        $opcode = $first['code'];
+
+        $component = Livewire::actingAs($admin)
+            ->test(AdminInspayOperators::class)
+            ->set('selectedUserId', $developer->id)
+            ->set('category', 'Credit Card');
+
+        $rows = $component->get('commissionRows');
+        $this->assertArrayHasKey($opcode, $rows);
+
+        $rows[$opcode] = [
+            'commission_type' => 'flat',
+            'commission_value' => '12.50',
+            'status' => 'Active',
+        ];
+
+        $instance = $component->instance();
+        $instance->commissionRows = $rows;
+        $instance->saveCommissions();
+
+        $row = UserBillOperatorCommission::query()
+            ->where('user_id', $developer->id)
+            ->where('opcode', $opcode)
+            ->first();
+
+        $this->assertNotNull($row);
+        $this->assertEquals('flat', $row->commission_type);
+        $this->assertEquals(12.50, (float) $row->commission_value);
+        $this->assertTrue((bool) $row->status);
+
+        $rows[$opcode] = [
+            'commission_type' => 'percentage',
+            'commission_value' => '2.25',
+            'status' => 'Active',
+        ];
+
+        $instance->commissionRows = $rows;
+        $instance->saveCommissions();
+
+        $row->refresh();
+        $this->assertEquals('percentage', $row->commission_type);
+        $this->assertEquals(2.25, (float) $row->commission_value);
+    }
+
+    public function test_developer_sees_own_commission_on_opcode_page(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole(Role::Developer->value);
+
+        UserBillOperatorCommission::create([
+            'user_id' => $user->id,
+            'opcode' => 'ICIC',
+            'commission_type' => 'percentage',
+            'commission_value' => 3.50,
+            'status' => true,
+        ]);
+
+        Livewire::actingAs($user)
+            ->test(UserInspayOperators::class)
+            ->set('search', 'ICIC')
+            ->assertSee('3.50')
+            ->assertSee('%');
     }
 }

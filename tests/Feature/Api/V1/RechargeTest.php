@@ -81,7 +81,7 @@ class RechargeTest extends TestCase
 
         $response->assertStatus(400)
             ->assertJsonPath('status', 'error')
-            ->assertJsonPath('message', 'Insufficient wallet balance. Required: ₹100, Available: ₹10');
+            ->assertJsonPath('message', 'Insufficient wallet balance. Please recharge your wallet. Required: ₹100, Available: ₹10');
     }
 
     public function test_recharge_success(): void

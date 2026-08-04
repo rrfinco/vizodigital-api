@@ -15,6 +15,9 @@ class BillPaymentTransaction extends Model
         'card',
         'opcode',
         'amount',
+        'commission_type',
+        'commission_value',
+        'commission_amount',
         'fetch_id',
         'pan',
         'status',
@@ -27,6 +30,8 @@ class BillPaymentTransaction extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'commission_value' => 'decimal:2',
+        'commission_amount' => 'decimal:2',
         'request_payload' => 'array',
         'response_payload' => 'array',
     ];

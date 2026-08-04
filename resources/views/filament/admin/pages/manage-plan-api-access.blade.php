@@ -4,7 +4,7 @@
     </x-slot>
 
     <x-slot name="description">
-        Enable EkycHub operator / plan / DTH APIs per developer and set the per-call wallet fee.
+        Platform (B2C) developers ke liye Plan API enable karein. White-label fees alag page pe set hote hain; WL developers ko partner manage karta hai.
     </x-slot>
 
     <div class="space-y-6">

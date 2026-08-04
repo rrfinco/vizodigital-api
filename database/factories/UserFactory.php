@@ -46,6 +46,13 @@ class UserFactory extends Factory
         ]);
     }
 
+    public function forWhitelabel(int $whitelabelId): static
+    {
+        return $this->state(fn (): array => [
+            'whitelabel_id' => $whitelabelId,
+        ]);
+    }
+
     public function kycSubmitted(): static
     {
         return $this->state(fn (array $attributes) => [

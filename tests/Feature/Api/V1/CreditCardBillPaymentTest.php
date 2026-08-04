@@ -7,6 +7,7 @@ use App\Enums\Role;
 use App\Models\BillPaymentTransaction;
 use App\Models\Setting;
 use App\Models\User;
+use App\Models\UserBillOperatorCommission;
 use App\Models\WalletTransaction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -133,7 +134,8 @@ class CreditCardBillPaymentTest extends TestCase
             'orderid' => 'PAY_LOW',
         ])
             ->assertStatus(400)
-            ->assertJsonPath('status', 'error');
+            ->assertJsonPath('status', 'error')
+            ->assertJsonPath('message', 'Insufficient wallet balance. Please recharge your wallet. Required: ₹100, Available: ₹10');
     }
 
     public function test_bill_pay_success_debits_wallet(): void
@@ -165,7 +167,8 @@ class CreditCardBillPaymentTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('data.utr', 'TJ014363062020A6D7C1')
-            ->assertJsonPath('data.txid', 51749154);
+            ->assertJsonPath('data.txid', 51749154)
+            ->assertJsonPath('data.commission_amount', 0);
 
         $this->assertEquals(2524.88, (float) $this->user->fresh()->wallet_balance);
 
@@ -182,6 +185,156 @@ class CreditCardBillPaymentTest extends TestCase
                 ->where('type', 'debit')
                 ->exists()
         );
+    }
+
+    public function test_bill_pay_percentage_commission_credited_on_success(): void
+    {
+        $this->actingAs($this->user, 'sanctum');
+
+        UserBillOperatorCommission::create([
+            'user_id' => $this->user->id,
+            'opcode' => 'ICIC',
+            'commission_type' => 'percentage',
+            'commission_value' => 2.00,
+            'status' => true,
+        ]);
+
+        Http::fake([
+            'inspay.in/*' => Http::response([
+                'txid' => 1001,
+                'status' => 'Success',
+                'utr' => 'UTR_PCT',
+                'dr_amount' => 1000,
+                'message' => 'Transaction Successful',
+                'orderid' => 'PAY_PCT',
+            ], 200),
+        ]);
+
+        $response = $this->postJson(route('api.v1.bill-payment.credit-card.pay'), [
+            'mobile' => '9876543210',
+            'card' => '3008',
+            'amount' => 1000,
+            'fetch_id' => 'FETCH_PCT',
+            'opcode' => 'ICIC',
+            'orderid' => 'PAY_PCT',
+        ]);
+
+        // 10000 - 1000 + 20 = 9020
+        $response->assertOk()
+            ->assertJsonPath('data.commission_amount', 20)
+            ->assertJsonPath('data.wallet_balance', 9020);
+
+        $this->user->refresh();
+        $this->assertEquals(9020.0, (float) $this->user->wallet_balance);
+        $this->assertEquals(20.0, (float) $this->user->earning_balance);
+
+        $this->assertDatabaseHas('bill_payment_transactions', [
+            'order_id' => 'PAY_PCT',
+            'commission_type' => 'percentage',
+            'commission_value' => 2.00,
+            'commission_amount' => 20.00,
+            'status' => 'success',
+        ]);
+    }
+
+    public function test_bill_pay_flat_commission_credited_on_success(): void
+    {
+        $this->actingAs($this->user, 'sanctum');
+
+        UserBillOperatorCommission::create([
+            'user_id' => $this->user->id,
+            'opcode' => 'ICIC',
+            'commission_type' => 'flat',
+            'commission_value' => 15.00,
+            'status' => true,
+        ]);
+
+        Http::fake([
+            'inspay.in/*' => Http::response([
+                'txid' => 1002,
+                'status' => 'Success',
+                'utr' => 'UTR_FLAT',
+                'dr_amount' => 500,
+                'message' => 'Transaction Successful',
+                'orderid' => 'PAY_FLAT',
+            ], 200),
+        ]);
+
+        $this->postJson(route('api.v1.bill-payment.credit-card.pay'), [
+            'mobile' => '9876543210',
+            'card' => '3008',
+            'amount' => 500,
+            'fetch_id' => 'FETCH_FLAT',
+            'opcode' => 'ICIC',
+            'orderid' => 'PAY_FLAT',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.commission_amount', 15)
+            ->assertJsonPath('data.wallet_balance', 9515);
+
+        $this->user->refresh();
+        $this->assertEquals(9515.0, (float) $this->user->wallet_balance);
+        $this->assertEquals(15.0, (float) $this->user->earning_balance);
+    }
+
+    public function test_bill_pay_inactive_operator_rejected(): void
+    {
+        $this->actingAs($this->user, 'sanctum');
+
+        UserBillOperatorCommission::create([
+            'user_id' => $this->user->id,
+            'opcode' => 'ICIC',
+            'commission_type' => 'percentage',
+            'commission_value' => 2.00,
+            'status' => false,
+        ]);
+
+        $this->postJson(route('api.v1.bill-payment.credit-card.pay'), [
+            'mobile' => '9876543210',
+            'card' => '3008',
+            'amount' => 100,
+            'fetch_id' => 'FETCH_INACTIVE',
+            'opcode' => 'ICIC',
+            'orderid' => 'PAY_INACTIVE',
+        ])
+            ->assertStatus(400)
+            ->assertJsonPath('message', 'This operator is currently inactive or disabled for your account.');
+
+        $this->assertEquals(10000.0, (float) $this->user->fresh()->wallet_balance);
+    }
+
+    public function test_bill_pay_failure_does_not_credit_commission(): void
+    {
+        $this->actingAs($this->user, 'sanctum');
+
+        UserBillOperatorCommission::create([
+            'user_id' => $this->user->id,
+            'opcode' => 'ICIC',
+            'commission_type' => 'flat',
+            'commission_value' => 25.00,
+            'status' => true,
+        ]);
+
+        Http::fake([
+            'inspay.in/*' => Http::response([
+                'status' => 'Failed',
+                'message' => 'Operator timeout',
+            ], 200),
+        ]);
+
+        $this->postJson(route('api.v1.bill-payment.credit-card.pay'), [
+            'mobile' => '9876543210',
+            'card' => '3008',
+            'amount' => 500,
+            'fetch_id' => 'FETCH_FAIL_COMM',
+            'opcode' => 'ICIC',
+            'orderid' => 'PAY_FAIL_COMM',
+        ])
+            ->assertStatus(400);
+
+        $this->user->refresh();
+        $this->assertEquals(10000.0, (float) $this->user->wallet_balance);
+        $this->assertEquals(0.0, (float) $this->user->earning_balance);
     }
 
     public function test_bill_pay_failure_refunds_wallet(): void

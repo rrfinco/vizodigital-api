@@ -1,21 +1,31 @@
 @extends('layouts.base')
 
-@section('title', 'Create account — ' . config('portal.name'))
+@section('title', 'Create account — ' . app(\App\Services\Portal\PortalSettings::class)->name())
 
 @section('body')
+    @php
+        $settings = app(\App\Services\Portal\PortalSettings::class);
+        $isWhitelabel = (bool) ($whitelabel ?? null);
+    @endphp
     <div class="flex min-h-screen flex-col justify-center bg-portal-bg px-4 py-12 dark:bg-slate-950">
         <div class="mx-auto w-full max-w-md">
             <div class="mb-8 text-center">
                 <a href="{{ route('landing') }}" class="inline-flex items-center justify-center">
                     <img
-                        src="{{ asset(config('portal.brand.logo')) }}"
-                        alt="{{ config('portal.brand.logo_text') }}"
+                        src="{{ $settings->logoUrl() }}"
+                        alt="{{ $settings->logoText() }}"
                         class="h-10 w-auto object-contain"
                     />
                 </a>
-                <h1 class="mt-6 text-2xl font-semibold tracking-tight text-portal-dark dark:text-white">Create developer account</h1>
+                <h1 class="mt-6 text-2xl font-semibold tracking-tight text-portal-dark dark:text-white">
+                    Create developer account
+                </h1>
                 <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                    After signup you will receive a KYC link by email. Login unlocks once an admin approves your documents.
+                    @if ($isWhitelabel)
+                        After signup you will receive a KYC link by email. Login unlocks once {{ $settings->name() }} approves your documents.
+                    @else
+                        After signup you will receive a KYC link by email. Login unlocks once an admin approves your documents.
+                    @endif
                 </p>
             </div>
 

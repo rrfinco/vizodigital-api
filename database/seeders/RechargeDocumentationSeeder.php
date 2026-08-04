@@ -218,7 +218,7 @@ MD,
                 'is_default' => false,
                 'example' => [
                     'status' => 'failed',
-                    'message' => 'Insufficient wallet balance.',
+                    'message' => 'Insufficient wallet balance. Please recharge your wallet.',
                 ],
                 'sort_order' => 2,
             ]
@@ -274,7 +274,7 @@ MD,
                     ],
                     'response' => [
                         'status' => 'failed',
-                        'message' => 'Insufficient wallet balance.',
+                        'message' => 'Insufficient wallet balance. Please recharge your wallet.',
                     ],
                     'response_status' => 400,
                     'description' => "Failed {$label} due to wallet or provider error.",

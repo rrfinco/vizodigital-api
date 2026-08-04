@@ -28,6 +28,7 @@ class User extends Authenticatable implements FilamentUser
         'password',
         'company_name',
         'phone',
+        'whitelabel_id',
         'wallet_balance',
         'onboarding_status',
         'kyc_token',
@@ -63,6 +64,11 @@ class User extends Authenticatable implements FilamentUser
             'wallet_balance' => 'decimal:4',
             'earning_balance' => 'decimal:4',
         ];
+    }
+
+    public function whitelabel(): BelongsTo
+    {
+        return $this->belongsTo(Whitelabel::class);
     }
 
     public function apiCredentials(): HasMany
@@ -108,7 +114,7 @@ class User extends Authenticatable implements FilamentUser
     {
         $amount = abs($amount);
         if ($this->wallet_balance < $amount) {
-            throw new \Exception('Insufficient wallet balance.');
+            throw new \Exception('Insufficient wallet balance. Please recharge your wallet.');
         }
 
         $balanceBefore = (float) $this->wallet_balance;
@@ -155,6 +161,7 @@ class User extends Authenticatable implements FilamentUser
     {
         return match ($panel->getId()) {
             'admin' => $this->isStaff(),
+            'partner' => $this->isWhitelabelPartner() && $this->belongsToResolvedWhitelabelHost(),
             'user' => $this->isDeveloper() && $this->isOnboardingApproved(),
             default => false,
         };
@@ -170,9 +177,29 @@ class User extends Authenticatable implements FilamentUser
         ]);
     }
 
+    public function isWhitelabelPartner(): bool
+    {
+        return $this->hasRole('whitelabel') && $this->whitelabel_id !== null;
+    }
+
+    /**
+     * Partner may only use the panel on their own white-label domain.
+     */
+    public function belongsToResolvedWhitelabelHost(): bool
+    {
+        $hostWlId = app(\App\Services\Whitelabel\WhitelabelContext::class)->id();
+
+        return $hostWlId !== null && (int) $hostWlId === (int) $this->whitelabel_id;
+    }
+
     public function isDeveloper(): bool
     {
         return $this->hasRole('developer');
+    }
+
+    public function belongsToWhitelabel(): bool
+    {
+        return $this->whitelabel_id !== null;
     }
 
     public function isOnboardingApproved(): bool

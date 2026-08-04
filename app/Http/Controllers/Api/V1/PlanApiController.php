@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Exceptions\WhitelabelUnavailableException;
 use App\Models\User;
 use App\Services\PlanApi\PlanApiService;
 use Illuminate\Http\JsonResponse;
@@ -159,6 +160,8 @@ class PlanApiController extends Controller
                 'fee' => $payload['fee'],
                 'wallet_balance' => $payload['wallet_balance'],
             ]);
+        } catch (WhitelabelUnavailableException $e) {
+            return $e->toJsonResponse();
         } catch (\RuntimeException $e) {
             $status = str_contains($e->getMessage(), 'not enabled') ? 403 : 400;
 

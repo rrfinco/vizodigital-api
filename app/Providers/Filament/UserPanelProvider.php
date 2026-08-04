@@ -5,8 +5,9 @@ namespace App\Providers\Filament;
 use App\Filament\Concerns\ConfiguresCrmPanelLayout;
 use App\Filament\User\Pages\Dashboard as UserDashboard;
 use App\Filament\User\Pages\Profile as UserProfile;
+use App\Http\Middleware\ClearIncompatibleFilamentSession;
+use App\Http\Middleware\FilamentAuthenticate;
 use Filament\Actions\Action;
-use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -33,10 +34,10 @@ class UserPanelProvider extends PanelProvider
             ->id('user')
             ->path('user')
             ->login()
-            ->brandName('USER portal')
+            ->brandName(fn (): string => app(\App\Services\Portal\PortalSettings::class)->whitelabelBrandName() ?: 'USER portal')
             ->brandLogo(fn (): HtmlString => new HtmlString(
                 view('filament.hooks.brand-mark', [
-                    'subtitle' => 'USER portal',
+                    'subtitle' => app(\App\Services\Portal\PortalSettings::class)->whitelabelBrandName() ?: 'USER portal',
                     'logoHeight' => '1.75rem',
                 ])->render()
             ))
@@ -63,9 +64,10 @@ class UserPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                ClearIncompatibleFilamentSession::class,
             ])
             ->authMiddleware([
-                Authenticate::class,
+                FilamentAuthenticate::class,
             ]);
 
         return $this->configureCrmLayout($panel, 'USER portal')

@@ -1095,7 +1095,184 @@
         color: rgb(148 163 184);
     }
 
-    /* InsPay operators — match wallet / credentials chrome */
+    /* InsPay operators — compact toolbar + dense table */
+    .inspay-ops-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 0.65rem;
+        border-radius: 0.65rem;
+        border: 1px solid rgb(15 23 42 / 0.08);
+        background: rgb(255 255 255);
+        box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+    }
+
+    .dark .inspay-ops-toolbar {
+        border-color: rgb(255 255 255 / 0.08);
+        background: rgb(255 255 255 / 0.03);
+        box-shadow: none;
+    }
+
+    .inspay-ops-toolbar-control {
+        height: 2rem;
+        border-radius: 0.4rem;
+        border: 1px solid rgb(15 23 42 / 0.12);
+        background: rgb(248 250 252);
+        padding: 0 0.5rem;
+        font-size: 0.75rem;
+        line-height: 2rem;
+        color: rgb(15 23 42);
+        min-width: 0;
+    }
+
+    .dark .inspay-ops-toolbar-control {
+        border-color: rgb(255 255 255 / 0.12);
+        background: rgb(15 23 42 / 0.45);
+        color: rgb(248 250 252);
+    }
+
+    .inspay-ops-toolbar-control--user {
+        flex: 0 1 11rem;
+        max-width: 13rem;
+    }
+
+    .inspay-ops-toolbar-control--category {
+        flex: 0 1 12rem;
+        max-width: 15rem;
+    }
+
+    .inspay-ops-toolbar-control--search {
+        flex: 1 1 10rem;
+        min-width: 8rem;
+        max-width: 18rem;
+    }
+
+    .inspay-ops-toolbar-count {
+        margin-left: auto;
+        font-size: 0.7rem;
+        color: rgb(100 116 139);
+        white-space: nowrap;
+    }
+
+    .inspay-ops-toolbar-count strong {
+        color: rgb(15 23 42);
+        font-weight: 700;
+    }
+
+    .dark .inspay-ops-toolbar-count {
+        color: rgb(148 163 184);
+    }
+
+    .dark .inspay-ops-toolbar-count strong {
+        color: rgb(248 250 252);
+    }
+
+    .inspay-ops-toolbar-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 2rem;
+        border-radius: 0.4rem;
+        padding: 0 0.7rem;
+        font-size: 0.72rem;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid transparent;
+        white-space: nowrap;
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+
+    .inspay-ops-toolbar-btn--ghost {
+        border-color: rgb(15 23 42 / 0.12);
+        background: transparent;
+        color: rgb(71 85 105);
+    }
+
+    .inspay-ops-toolbar-btn--ghost:hover {
+        background: rgb(248 250 252);
+        color: rgb(15 23 42);
+    }
+
+    .dark .inspay-ops-toolbar-btn--ghost {
+        border-color: rgb(255 255 255 / 0.12);
+        color: rgb(203 213 225);
+    }
+
+    .dark .inspay-ops-toolbar-btn--ghost:hover {
+        background: rgb(255 255 255 / 0.06);
+        color: rgb(248 250 252);
+    }
+
+    .inspay-ops-toolbar-btn--primary {
+        background: rgb(13 148 136);
+        color: white;
+    }
+
+    .inspay-ops-toolbar-btn--primary:hover {
+        background: rgb(15 118 110);
+    }
+
+    .inspay-ops-panel {
+        border-radius: 0.65rem;
+        border: 1px solid rgb(15 23 42 / 0.08);
+        background: rgb(255 255 255);
+        overflow: hidden;
+        box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+    }
+
+    .dark .inspay-ops-panel {
+        border-color: rgb(255 255 255 / 0.08);
+        background: rgb(255 255 255 / 0.03);
+        box-shadow: none;
+    }
+
+    .inspay-ops-panel__head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.35rem 0.75rem;
+        padding: 0.45rem 0.75rem;
+        border-bottom: 1px solid rgb(15 23 42 / 0.06);
+        background: rgb(248 250 252 / 0.7);
+    }
+
+    .dark .inspay-ops-panel__head {
+        border-bottom-color: rgb(255 255 255 / 0.06);
+        background: rgb(15 23 42 / 0.25);
+    }
+
+    .inspay-ops-panel__title {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: rgb(15 23 42);
+    }
+
+    .dark .inspay-ops-panel__title {
+        color: rgb(248 250 252);
+    }
+
+    .inspay-ops-panel__hint {
+        font-size: 0.68rem;
+        color: rgb(100 116 139);
+    }
+
+    .inspay-ops-panel__hint code {
+        font-size: 0.65rem;
+        padding: 0.05rem 0.25rem;
+        border-radius: 0.25rem;
+        background: rgb(15 23 42 / 0.06);
+    }
+
+    .dark .inspay-ops-panel__hint {
+        color: rgb(148 163 184);
+    }
+
+    .dark .inspay-ops-panel__hint code {
+        background: rgb(255 255 255 / 0.08);
+    }
+
     .inspay-ops-badge {
         display: inline-flex;
         max-width: 11rem;
@@ -1104,8 +1281,8 @@
         white-space: nowrap;
         border-radius: 9999px;
         background: rgb(13 148 136 / 0.1);
-        padding: 0.2rem 0.55rem;
-        font-size: 0.65rem;
+        padding: 0.15rem 0.45rem;
+        font-size: 0.62rem;
         font-weight: 700;
         letter-spacing: 0.02em;
         color: rgb(15 118 110);
@@ -1116,30 +1293,20 @@
         color: rgb(153 246 228);
     }
 
-    .inspay-ops-badge--muted {
-        background: rgb(148 163 184 / 0.18);
-        color: rgb(71 85 105);
-    }
-
-    .dark .inspay-ops-badge--muted {
-        background: rgb(148 163 184 / 0.15);
-        color: rgb(203 213 225);
-    }
-
     .inspay-ops-code {
         display: inline-flex;
-        border-radius: 0.5rem;
-        background: rgb(248 250 252);
-        padding: 0.3rem 0.55rem;
+        border-radius: 0.3rem;
+        background: rgb(241 245 249);
+        padding: 0.12rem 0.4rem;
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-        font-size: 0.8rem;
+        font-size: 0.7rem;
         font-weight: 700;
         color: rgb(15 23 42);
         user-select: all;
     }
 
     .dark .inspay-ops-code {
-        background: rgb(255 255 255 / 0.06);
+        background: rgb(255 255 255 / 0.08);
         color: rgb(248 250 252);
     }
 
@@ -1147,14 +1314,12 @@
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        min-width: 4.5rem;
-        border-radius: 0.5rem;
+        width: 1.65rem;
+        height: 1.65rem;
+        border-radius: 0.35rem;
         border: 1px solid rgb(15 23 42 / 0.1);
         background: rgb(248 250 252);
-        padding: 0.35rem 0.65rem;
-        font-size: 0.7rem;
-        font-weight: 600;
-        color: rgb(51 65 85);
+        color: rgb(71 85 105);
         cursor: pointer;
         transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
     }
@@ -1177,61 +1342,216 @@
         color: rgb(153 246 228);
     }
 
-    .inspay-ops-filter-chip {
-        display: inline-flex;
-        max-width: 100%;
-        align-items: center;
-        gap: 0.35rem;
-        border-radius: 9999px;
-        border: 1px solid rgb(13 148 136 / 0.35);
-        background: rgb(240 253 250);
-        padding: 0.3rem 0.65rem;
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: rgb(15 118 110);
-        cursor: pointer;
-        transition: background 0.15s ease, border-color 0.15s ease;
-    }
-
-    .inspay-ops-filter-chip:hover {
-        border-color: rgb(13 148 136 / 0.6);
-        background: rgb(204 251 241);
-    }
-
-    .dark .inspay-ops-filter-chip {
-        border-color: rgb(45 212 191 / 0.35);
-        background: rgb(19 78 74 / 0.35);
-        color: rgb(153 246 228);
-    }
-
-    .dark .inspay-ops-filter-chip:hover {
-        border-color: rgb(45 212 191 / 0.55);
-        background: rgb(19 78 74 / 0.55);
-    }
-
     .inspay-ops-card {
-        border-radius: 0.85rem;
+        border-radius: 0.55rem;
         border: 1px solid rgb(15 23 42 / 0.08);
         background: rgb(255 255 255);
-        padding: 0.9rem 1rem;
-        box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+        padding: 0.55rem 0.65rem;
     }
 
     .dark .inspay-ops-card {
         border-color: rgb(255 255 255 / 0.08);
         background: rgb(255 255 255 / 0.03);
-        box-shadow: none;
     }
 
-    .inspay-ops-table {
-        min-width: 0;
-    }
-
-    .inspay-ops-page .wallet-table-wrap {
+    .inspay-ops-table-wrap {
+        display: block !important;
+        max-height: min(72vh, 54rem);
+        overflow: auto;
         -webkit-overflow-scrolling: touch;
     }
 
-    @media (max-width: 640px) {
+    .inspay-ops-cards {
+        display: none !important;
+    }
+
+    .inspay-ops-table {
+        min-width: 640px;
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        table-layout: fixed;
+    }
+
+    .inspay-ops-table thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: rgb(248 250 252);
+        border-bottom: 1px solid rgb(15 23 42 / 0.08);
+        padding: 0.4rem 0.55rem !important;
+        font-size: 0.62rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: rgb(100 116 139);
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    .dark .inspay-ops-table thead th {
+        background: rgb(15 23 42);
+        border-bottom-color: rgb(255 255 255 / 0.08);
+        color: rgb(148 163 184);
+    }
+
+    .inspay-ops-table tbody td {
+        padding: 0.28rem 0.55rem !important;
+        font-size: 0.72rem !important;
+        line-height: 1.3 !important;
+        vertical-align: middle !important;
+        border-bottom: 1px solid rgb(15 23 42 / 0.05);
+        white-space: nowrap;
+    }
+
+    .dark .inspay-ops-table tbody td {
+        border-bottom-color: rgb(255 255 255 / 0.05);
+    }
+
+    .inspay-ops-table tbody tr:nth-child(even) td {
+        background: rgb(248 250 252 / 0.55);
+    }
+
+    .dark .inspay-ops-table tbody tr:nth-child(even) td {
+        background: rgb(255 255 255 / 0.02);
+    }
+
+    .inspay-ops-table tbody tr:hover td {
+        background: rgb(240 253 250 / 0.65);
+    }
+
+    .dark .inspay-ops-table tbody tr:hover td {
+        background: rgb(19 78 74 / 0.22);
+    }
+
+    .inspay-ops-table .inspay-ops-badge {
+        max-width: 100%;
+        padding: 0.1rem 0.4rem;
+        font-size: 0.58rem;
+    }
+
+    .inspay-ops-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: rgb(15 23 42);
+    }
+
+    .dark .inspay-ops-name {
+        color: rgb(248 250 252);
+    }
+
+    .inspay-ops-cell-text {
+        font-size: 0.7rem;
+        font-weight: 500;
+        color: rgb(51 65 85);
+    }
+
+    .inspay-ops-cell-text--strong {
+        font-weight: 700;
+        color: rgb(15 23 42);
+    }
+
+    .dark .inspay-ops-cell-text {
+        color: rgb(203 213 225);
+    }
+
+    .dark .inspay-ops-cell-text--strong {
+        color: rgb(248 250 252);
+    }
+
+    .inspay-ops-status {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 0.25rem;
+        padding: 0.1rem 0.4rem;
+        font-size: 0.62rem;
+        font-weight: 700;
+    }
+
+    .inspay-ops-status--on {
+        background: rgb(240 253 250);
+        color: rgb(15 118 110);
+        box-shadow: inset 0 0 0 1px rgb(13 148 136 / 0.25);
+    }
+
+    .inspay-ops-status--off {
+        background: rgb(255 241 242);
+        color: rgb(190 18 60);
+        box-shadow: inset 0 0 0 1px rgb(244 63 94 / 0.25);
+    }
+
+    .dark .inspay-ops-status--on {
+        background: rgb(19 78 74 / 0.35);
+        color: rgb(153 246 228);
+    }
+
+    .dark .inspay-ops-status--off {
+        background: rgb(136 19 55 / 0.35);
+        color: rgb(253 164 175);
+    }
+
+    .inspay-ops-td-action {
+        text-align: center;
+        width: 2.5rem;
+    }
+
+    .inspay-ops-compact-input,
+    .inspay-ops-compact-select {
+        display: block;
+        width: 100%;
+        height: 1.7rem;
+        border-radius: 0.35rem;
+        border: 1px solid rgb(15 23 42 / 0.12);
+        background: rgb(255 255 255);
+        padding: 0 0.35rem;
+        font-size: 0.7rem;
+        line-height: 1.7rem;
+        color: rgb(15 23 42);
+    }
+
+    .inspay-ops-compact-input {
+        max-width: 5.25rem;
+    }
+
+    .inspay-ops-compact-select {
+        max-width: 5.5rem;
+        cursor: pointer;
+    }
+
+    .dark .inspay-ops-compact-input,
+    .dark .inspay-ops-compact-select {
+        border-color: rgb(255 255 255 / 0.12);
+        background: rgb(15 23 42 / 0.45);
+        color: rgb(248 250 252);
+    }
+
+    .inspay-ops-pagination {
+        padding: 0.5rem 0.75rem;
+        border-top: 1px solid rgb(15 23 42 / 0.06);
+        overflow-x: auto;
+    }
+
+    .dark .inspay-ops-pagination {
+        border-top-color: rgb(255 255 255 / 0.06);
+    }
+
+    @media (max-width: 768px) {
+        .inspay-ops-toolbar-count {
+            margin-left: 0;
+            width: 100%;
+            order: 10;
+        }
+
+        .inspay-ops-toolbar-control--user,
+        .inspay-ops-toolbar-control--category,
+        .inspay-ops-toolbar-control--search {
+            flex: 1 1 100%;
+            max-width: none;
+        }
+
         .inspay-ops-badge {
             max-width: 100%;
         }

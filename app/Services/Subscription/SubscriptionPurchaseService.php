@@ -5,10 +5,15 @@ namespace App\Services\Subscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
 use App\Models\UserSubscription;
+use App\Services\Whitelabel\WhitelabelBillingGate;
 use Illuminate\Support\Facades\DB;
 
 class SubscriptionPurchaseService
 {
+    public function __construct(
+        private readonly WhitelabelBillingGate $whitelabelBillingGate,
+    ) {}
+
     public function purchase(User $user, SubscriptionPlan $plan): UserSubscription
     {
         if (! $plan->is_active) {
@@ -18,6 +23,8 @@ class SubscriptionPurchaseService
         $price = (float) $plan->price;
 
         return DB::transaction(function () use ($user, $plan, $price): UserSubscription {
+            $wl = $this->whitelabelBillingGate->lockForDebit($user, $price);
+
             /** @var User $lockedUser */
             $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
 
@@ -43,10 +50,10 @@ class SubscriptionPurchaseService
             if ($price > 0 && (float) $lockedUser->wallet_balance < $price) {
                 throw new \Exception(
                     'Insufficient wallet balance. Available: ₹'
-                    . number_format((float) $lockedUser->wallet_balance, 2)
-                    . '. Required: ₹'
-                    . number_format($price, 2)
-                    . '.'
+                    .number_format((float) $lockedUser->wallet_balance, 2)
+                    .'. Required: ₹'
+                    .number_format($price, 2)
+                    .'.'
                 );
             }
 
@@ -70,6 +77,12 @@ class SubscriptionPurchaseService
 
             if ($price > 0) {
                 $lockedUser->debitWallet(
+                    $price,
+                    "Subscription purchase: {$lockedPlan->name} ({$lockedPlan->duration_days} days)",
+                    $subscription
+                );
+                $this->whitelabelBillingGate->debit(
+                    $wl,
                     $price,
                     "Subscription purchase: {$lockedPlan->name} ({$lockedPlan->duration_days} days)",
                     $subscription

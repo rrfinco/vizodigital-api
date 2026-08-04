@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Exceptions\WhitelabelUnavailableException;
 use App\Services\Recharge\RechargeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -76,6 +77,8 @@ class RechargeController extends Controller
                 ]
             ], $httpStatus);
 
+        } catch (WhitelabelUnavailableException $e) {
+            return $e->toJsonResponse();
         } catch (\Throwable $e) {
             return response()->json([
                 'status' => 'error',

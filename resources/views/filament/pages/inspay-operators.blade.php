@@ -3,126 +3,94 @@
     $counts = $this->categoryCounts();
     $hasFilters = $this->hasActiveFilters();
     $activeCategory = trim($this->category);
-    $activeSearch = trim($this->search);
+    $canManage = $this->canManageCommissions();
+    $filteredCount = $this->filteredCount();
+    $totalCount = $this->totalCount();
 @endphp
 
 <x-filament-panels::page>
-    <div class="inspay-ops-page space-y-6">
-        <p class="text-sm text-gray-600 dark:text-gray-300 -mt-2">
-            Look up InsPay API operator codes for bill pay and related services. Filter by category or search by name / code.
-        </p>
+    <div class="inspay-ops-page space-y-3">
+        {{-- Compact single-row toolbar --}}
+        <div
+            wire:key="inspay-filters-{{ $this->filterVersion }}"
+            class="inspay-ops-toolbar"
+        >
+            @if ($canManage)
+                <select
+                    class="inspay-ops-toolbar-control inspay-ops-toolbar-control--user"
+                    wire:model.live="selectedUserId"
+                    title="Developer"
+                >
+                    @foreach ($this->developerUsersForSelect() as $user)
+                        <option value="{{ $user['id'] }}">{{ $user['label'] }}</option>
+                    @endforeach
+                </select>
+            @endif
 
-        {{-- Simple & Clean Filters --}}
-        <x-filament::section>
-            <x-slot name="heading">
-                <div class="flex items-center gap-2">
-                    <x-filament::icon icon="heroicon-o-funnel" class="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                    <span class="font-semibold text-sm">Filter operators</span>
-                </div>
-            </x-slot>
+            <select
+                class="inspay-ops-toolbar-control inspay-ops-toolbar-control--category"
+                wire:model.live="category"
+                title="Category"
+            >
+                <option value="">All categories ({{ number_format($totalCount) }})</option>
+                @foreach ($counts as $cat => $count)
+                    <option value="{{ $cat }}" @selected($activeCategory === $cat)>
+                        {{ $cat }} ({{ number_format($count) }})
+                    </option>
+                @endforeach
+            </select>
 
-            <div wire:key="inspay-filters-{{ $this->filterVersion }}" class="space-y-4">
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <div class="min-w-0">
-                        <label class="mb-1.5 block text-xs font-medium text-gray-700 dark:text-gray-300">
-                            Category
-                        </label>
-                        <x-filament::input.wrapper>
-                            <x-filament::input.select wire:model.live="category">
-                                <option value="">All categories ({{ number_format($this->totalCount()) }})</option>
-                                @foreach ($counts as $cat => $count)
-                                    <option value="{{ $cat }}" @selected($activeCategory === $cat)>
-                                        {{ $cat }} ({{ number_format($count) }})
-                                    </option>
-                                @endforeach
-                            </x-filament::input.select>
-                        </x-filament::input.wrapper>
-                    </div>
+            <input
+                type="search"
+                class="inspay-ops-toolbar-control inspay-ops-toolbar-control--search"
+                wire:model.live.debounce.300ms="search"
+                placeholder="Search name or code…"
+                autocomplete="off"
+            />
 
-                    <div class="min-w-0">
-                        <label class="mb-1.5 block text-xs font-medium text-gray-700 dark:text-gray-300">
-                            Search
-                        </label>
-                        <x-filament::input.wrapper>
-                            <x-filament::input
-                                type="search"
-                                wire:model.live.debounce.300ms="search"
-                                placeholder="Search operator name or code…"
-                                autocomplete="off"
-                            />
-                        </x-filament::input.wrapper>
-                    </div>
-                </div>
+            <span class="inspay-ops-toolbar-count">
+                <strong>{{ number_format($filteredCount) }}</strong>/{{ number_format($totalCount) }}
+            </span>
 
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-1">
-                    <div class="flex flex-wrap items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                        <span>
-                            Showing <strong class="font-semibold text-gray-900 dark:text-white">{{ number_format($this->filteredCount()) }}</strong> of {{ number_format($this->totalCount()) }} operators
-                        </span>
+            @if ($hasFilters)
+                <button
+                    type="button"
+                    wire:click="clearFilters"
+                    class="inspay-ops-toolbar-btn inspay-ops-toolbar-btn--ghost"
+                    title="Clear filters"
+                >
+                    Clear
+                </button>
+            @endif
 
-                        @if ($hasFilters)
-                            <div class="flex flex-wrap items-center gap-1.5 ml-1">
-                                @if ($activeCategory !== '')
-                                    <button
-                                        type="button"
-                                        wire:click="clearCategory"
-                                        class="inspay-ops-filter-chip"
-                                        title="Remove category filter"
-                                    >
-                                        <span>{{ $activeCategory }}</span>
-                                        <x-filament::icon icon="heroicon-m-x-mark" class="h-3.5 w-3.5 shrink-0" />
-                                    </button>
-                                @endif
-
-                                @if ($activeSearch !== '')
-                                    <button
-                                        type="button"
-                                        wire:click="clearSearch"
-                                        class="inspay-ops-filter-chip"
-                                        title="Remove search filter"
-                                    >
-                                        <span>“{{ $activeSearch }}”</span>
-                                        <x-filament::icon icon="heroicon-m-x-mark" class="h-3.5 w-3.5 shrink-0" />
-                                    </button>
-                                @endif
-                            </div>
-                        @endif
-                    </div>
-
-                    @if ($hasFilters)
-                        <div>
-                            <x-filament::button
-                                wire:click="clearFilters"
-                                color="gray"
-                                size="sm"
-                                icon="heroicon-m-x-mark"
-                            >
-                                Clear filters
-                            </x-filament::button>
-                        </div>
-                    @endif
-                </div>
-            </div>
-        </x-filament::section>
+            @if ($canManage)
+                <button
+                    type="button"
+                    wire:click="saveCommissions"
+                    class="inspay-ops-toolbar-btn inspay-ops-toolbar-btn--primary"
+                >
+                    Save page
+                </button>
+            @endif
+        </div>
 
         {{-- Results --}}
-        <x-filament::section>
-            <x-slot name="heading">
-                <div class="flex items-center gap-2">
-                    <span class="wallet-icon-wrap">
-                        <x-filament::icon icon="heroicon-o-queue-list" class="h-4 w-4 text-teal-600 dark:text-teal-300" />
-                    </span>
-                    <span class="font-semibold">Operator codes</span>
-                </div>
-            </x-slot>
-
-            <x-slot name="description">
-                Use the code as <code class="text-xs">opcode</code> in bill payment APIs
-            </x-slot>
+        <div class="inspay-ops-panel">
+            <div class="inspay-ops-panel__head">
+                <span class="inspay-ops-panel__title">
+                    Operators · {{ number_format($operators->count()) }} shown
+                </span>
+                <span class="inspay-ops-panel__hint">
+                    Use code as <code>opcode</code>
+                    @if ($canManage)
+                        · edit then Save page
+                    @endif
+                </span>
+            </div>
 
             <div
                 wire:loading.class="opacity-50 pointer-events-none"
-                wire:target="category,search,selectCategory,clearFilters,clearCategory,clearSearch,gotoPage,nextPage,previousPage"
+                wire:target="category,search,selectCategory,clearFilters,clearCategory,clearSearch,gotoPage,nextPage,previousPage,selectedUserId,saveCommissions"
                 class="transition-opacity"
             >
                 @if ($operators->isEmpty())
@@ -131,80 +99,49 @@
                             <x-filament::icon icon="heroicon-o-magnifying-glass" class="h-7 w-7" />
                         </div>
                         <p class="wallet-empty__title">No operators found</p>
-                        <p class="wallet-empty__hint">
-                            Try another category or search term.
-                        </p>
+                        <p class="wallet-empty__hint">Try another category or search term.</p>
                         @if ($hasFilters)
                             <div class="mt-3">
-                                <x-filament::button wire:click="clearFilters" color="primary" size="sm">
+                                <button type="button" wire:click="clearFilters" class="inspay-ops-toolbar-btn inspay-ops-toolbar-btn--primary">
                                     Clear filters
-                                </x-filament::button>
+                                </button>
                             </div>
                         @endif
                     </div>
                 @else
-                    {{-- Mobile cards --}}
-                    <div class="inspay-ops-cards space-y-3 md:hidden">
-                        @foreach ($operators as $op)
-                            <div
-                                wire:key="op-card-{{ $op['code'] }}-{{ $loop->index }}"
-                                class="inspay-ops-card"
-                            >
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="min-w-0 flex-1">
-                                        <span class="inspay-ops-badge">{{ $op['category'] }}</span>
-                                        <p class="mt-2 text-sm font-semibold text-gray-900 dark:text-white break-words">
-                                            {{ $op['name'] }}
-                                        </p>
-                                        <code class="inspay-ops-code mt-2 inline-flex">{{ $op['code'] }}</code>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        class="inspay-ops-copy shrink-0"
-                                        x-data="{ copied: false }"
-                                        x-on:click="
-                                            navigator.clipboard.writeText({{ Js::from($op['code']) }}).then(() => {
-                                                copied = true;
-                                                $wire.copyCode({{ Js::from($op['code']) }});
-                                                setTimeout(() => copied = false, 1500);
-                                            })
-                                        "
-                                    >
-                                        <span x-show="!copied" class="inline-flex items-center gap-1">
-                                            <x-filament::icon icon="heroicon-m-clipboard-document" class="h-3.5 w-3.5" />
-                                            Copy
-                                        </span>
-                                        <span x-cloak x-show="copied" class="inline-flex items-center gap-1 text-teal-700 dark:text-teal-300">
-                                            <x-filament::icon icon="heroicon-m-check" class="h-3.5 w-3.5" />
-                                            Copied
-                                        </span>
-                                    </button>
-                                </div>
-                            </div>
-                        @endforeach
-                    </div>
-
-                    {{-- Desktop table --}}
-                    <div class="wallet-table-wrap mt-1 hidden md:block">
-                        <table class="wallet-table inspay-ops-table">
+                    {{-- Always table (no card layout — Tailwind md: breakpoints unreliable in this view) --}}
+                    <div class="inspay-ops-table-wrap">
+                        <table class="inspay-ops-table">
+                            <colgroup>
+                                <col style="width: 14%" />
+                                <col style="width: 32%" />
+                                <col style="width: 10%" />
+                                <col style="width: 12%" />
+                                <col style="width: 12%" />
+                                <col style="width: 12%" />
+                                <col style="width: 8%" />
+                            </colgroup>
                             <thead>
                                 <tr>
                                     <th>Category</th>
-                                    <th>Service / Operator</th>
-                                    <th>API code</th>
-                                    <th class="w-24"></th>
+                                    <th>Operator</th>
+                                    <th>Code</th>
+                                    <th>Type</th>
+                                    <th>Comm.</th>
+                                    <th>Status</th>
+                                    <th></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($operators as $op)
                                     <tr wire:key="op-{{ $op['code'] }}-{{ $loop->index }}">
                                         <td>
-                                            <span class="inspay-ops-badge">
+                                            <span class="inspay-ops-badge" title="{{ $op['category'] }}">
                                                 {{ $op['category'] }}
                                             </span>
                                         </td>
                                         <td>
-                                            <div class="wallet-table__date" title="{{ $op['name'] }}">
+                                            <div class="inspay-ops-name" title="{{ $op['name'] }}">
                                                 {{ $op['name'] }}
                                             </div>
                                         </td>
@@ -212,9 +149,55 @@
                                             <code class="inspay-ops-code">{{ $op['code'] }}</code>
                                         </td>
                                         <td>
+                                            @if ($canManage)
+                                                <select
+                                                    class="inspay-ops-compact-select"
+                                                    wire:model="commissionRows.{{ $op['code'] }}.commission_type"
+                                                >
+                                                    <option value="percentage">%</option>
+                                                    <option value="flat">Flat ₹</option>
+                                                </select>
+                                            @else
+                                                <span class="inspay-ops-cell-text">
+                                                    {{ $op['commission_type'] === 'flat' ? 'Flat ₹' : '%' }}
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if ($canManage)
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    class="inspay-ops-compact-input"
+                                                    wire:model="commissionRows.{{ $op['code'] }}.commission_value"
+                                                />
+                                            @else
+                                                <span class="inspay-ops-cell-text inspay-ops-cell-text--strong">
+                                                    {{ $op['commission_value'] }}
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if ($canManage)
+                                                <select
+                                                    class="inspay-ops-compact-select"
+                                                    wire:model="commissionRows.{{ $op['code'] }}.status"
+                                                >
+                                                    <option value="Active">On</option>
+                                                    <option value="Inactive">Off</option>
+                                                </select>
+                                            @else
+                                                <span class="inspay-ops-status {{ $op['status'] === 'Active' ? 'inspay-ops-status--on' : 'inspay-ops-status--off' }}">
+                                                    {{ $op['status'] === 'Active' ? 'On' : 'Off' }}
+                                                </span>
+                                            @endif
+                                        </td>
+                                        <td class="inspay-ops-td-action">
                                             <button
                                                 type="button"
                                                 class="inspay-ops-copy"
+                                                title="Copy {{ $op['code'] }}"
                                                 x-data="{ copied: false }"
                                                 x-on:click="
                                                     navigator.clipboard.writeText({{ Js::from($op['code']) }}).then(() => {
@@ -224,13 +207,11 @@
                                                     })
                                                 "
                                             >
-                                                <span x-show="!copied" class="inline-flex items-center gap-1">
-                                                    <x-filament::icon icon="heroicon-m-clipboard-document" class="h-3.5 w-3.5" />
-                                                    Copy
+                                                <span x-show="!copied" class="inline-flex items-center">
+                                                    <x-filament::icon icon="heroicon-m-clipboard-document" class="h-3 w-3" />
                                                 </span>
-                                                <span x-cloak x-show="copied" class="inline-flex items-center gap-1 text-teal-700 dark:text-teal-300">
-                                                    <x-filament::icon icon="heroicon-m-check" class="h-3.5 w-3.5" />
-                                                    Copied
+                                                <span x-cloak x-show="copied" class="inline-flex items-center text-teal-700 dark:text-teal-300">
+                                                    <x-filament::icon icon="heroicon-m-check" class="h-3 w-3" />
                                                 </span>
                                             </button>
                                         </td>
@@ -240,11 +221,11 @@
                         </table>
                     </div>
 
-                    <div class="mt-4 overflow-x-auto">
+                    <div class="inspay-ops-pagination">
                         {{ $operators->links() }}
                     </div>
                 @endif
             </div>
-        </x-filament::section>
+        </div>
     </div>
 </x-filament-panels::page>

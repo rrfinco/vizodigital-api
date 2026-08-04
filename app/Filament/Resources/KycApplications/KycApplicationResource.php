@@ -57,7 +57,7 @@ class KycApplicationResource extends Resource
                 OnboardingStatus::Approved->value,
             ])
             ->withCount('kycDocuments')
-            ->with(['kycDocuments', 'approvedBy']);
+            ->with(['kycDocuments', 'approvedBy', 'whitelabel']);
     }
 
     public static function form(Schema $schema): Schema
@@ -76,6 +76,7 @@ class KycApplicationResource extends Resource
                         TextEntry::make('email'),
                         TextEntry::make('company_name')->placeholder('—'),
                         TextEntry::make('phone')->placeholder('—'),
+                        TextEntry::make('whitelabel.name')->label('White-label')->placeholder('B2C (platform)'),
                         TextEntry::make('onboarding_status')
                             ->badge()
                             ->color(fn ($state) => $state?->color())

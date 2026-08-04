@@ -8,6 +8,7 @@ enum Role: string
     case Admin = 'admin';
     case Editor = 'editor';
     case Viewer = 'viewer';
+    case Whitelabel = 'whitelabel';
     case Developer = 'developer';
 
     public function label(): string
@@ -17,6 +18,7 @@ enum Role: string
             self::Admin => 'Admin',
             self::Editor => 'Editor',
             self::Viewer => 'Viewer',
+            self::Whitelabel => 'White-label',
             self::Developer => 'Developer',
         };
     }

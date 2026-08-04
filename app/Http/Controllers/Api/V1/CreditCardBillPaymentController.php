@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Exceptions\WhitelabelUnavailableException;
 use App\Services\BillPayment\CreditCardBillPaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -111,6 +112,7 @@ class CreditCardBillPaymentController extends Controller
                     'mobile' => $provider['mobile'] ?? $txn->mobile,
                     'card' => $provider['card'] ?? null,
                     'amount' => (float) ($provider['dr_amount'] ?? $txn->amount),
+                    'commission_amount' => (float) ($txn->commission_amount ?? 0),
                     'orderid' => $provider['orderid'] ?? $txn->order_id,
                     'wallet_balance' => (float) $user->fresh()->wallet_balance,
                 ],
@@ -120,6 +122,8 @@ class CreditCardBillPaymentController extends Controller
                 'status' => 'error',
                 'message' => $e->getMessage(),
             ], 422);
+        } catch (WhitelabelUnavailableException $e) {
+            return $e->toJsonResponse();
         } catch (\Throwable $e) {
             return response()->json([
                 'status' => 'error',

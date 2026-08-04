@@ -77,8 +77,10 @@ class ManagePlanApiAccess extends Page
      */
     private function developerUsers(): Collection
     {
+        // Platform B2C developers only — WL developers are managed by partners.
         return User::query()
             ->role(Role::Developer->value)
+            ->whereNull('whitelabel_id')
             ->orderBy('name')
             ->get();
     }

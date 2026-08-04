@@ -2,16 +2,21 @@
 
 namespace App\Services\BillPayment;
 
+use App\Exceptions\WhitelabelUnavailableException;
 use App\Models\BillPaymentTransaction;
 use App\Models\User;
+use App\Models\UserBillOperatorCommission;
+use App\Models\WhitelabelBillOperatorCommission;
 use App\Services\Inspay\InspayService;
+use App\Services\Whitelabel\WhitelabelBillingGate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class CreditCardBillPaymentService
 {
     public function __construct(
-        private readonly InspayService $inspay
+        private readonly InspayService $inspay,
+        private readonly WhitelabelBillingGate $whitelabelBillingGate,
     ) {}
 
     /**
@@ -74,27 +79,62 @@ class CreditCardBillPaymentService
     }
 
     /**
-     * Debit developer wallet, then pay via Inspay. Refund on provider failure.
+     * Debit developer + WL float, then pay via Inspay. Credit commissions on success; refund both on failure.
      *
      * @param  array{mobile: string, card: string, amount: float, fetch_id: string, opcode: string, orderid: string, pan?: string|null}  $data
      * @return array{transaction: BillPaymentTransaction, provider: array<string, mixed>}
+     *
+     * @throws WhitelabelUnavailableException
      */
     public function payBill(User $user, array $data): array
     {
         $amount = round((float) $data['amount'], 2);
+        $opcode = (string) $data['opcode'];
 
         if ($amount >= 50000 && empty($data['pan'])) {
             throw new \InvalidArgumentException('PAN is mandatory for payments of ₹50,000 or more.');
         }
 
+        $commission = UserBillOperatorCommission::resolveFor($user->id, $opcode);
+
+        if (! $commission['status']) {
+            throw new \RuntimeException('This operator is currently inactive or disabled for your account.');
+        }
+
+        $commissionAmount = UserBillOperatorCommission::calculateAmount(
+            $commission['commission_type'],
+            $commission['commission_value'],
+            $amount
+        );
+
+        $wlCommissionAmount = 0.0;
+        if ($user->whitelabel_id) {
+            $wlCommission = WhitelabelBillOperatorCommission::resolveFor((int) $user->whitelabel_id, $opcode);
+
+            if (! $wlCommission['status']) {
+                throw new WhitelabelUnavailableException(
+                    WhitelabelUnavailableException::REASON_SUSPENDED,
+                    (int) $user->whitelabel_id
+                );
+            }
+
+            $wlCommissionAmount = WhitelabelBillOperatorCommission::calculateAmount(
+                $wlCommission['commission_type'],
+                $wlCommission['commission_value'],
+                $amount
+            );
+        }
+
         /** @var BillPaymentTransaction $txn */
-        $txn = DB::transaction(function () use ($user, $data, $amount) {
+        $txn = DB::transaction(function () use ($user, $data, $amount, $commission, $commissionAmount) {
+            $wl = $this->whitelabelBillingGate->lockForDebit($user, $amount);
+
             /** @var User $lockedUser */
             $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
 
             if ((float) $lockedUser->wallet_balance < $amount) {
                 $available = (float) $lockedUser->wallet_balance;
-                throw new \RuntimeException("Insufficient wallet balance. Required: ₹{$amount}, Available: ₹{$available}");
+                throw new \RuntimeException("Insufficient wallet balance. Please recharge your wallet. Required: ₹{$amount}, Available: ₹{$available}");
             }
 
             $existing = BillPaymentTransaction::query()
@@ -115,6 +155,9 @@ class CreditCardBillPaymentService
                 'card' => $data['card'],
                 'opcode' => $data['opcode'],
                 'amount' => $amount,
+                'commission_type' => $commission['commission_type'],
+                'commission_value' => $commission['commission_value'],
+                'commission_amount' => $commissionAmount,
                 'fetch_id' => $data['fetch_id'],
                 'pan' => $data['pan'] ?? null,
                 'status' => 'pending',
@@ -122,6 +165,12 @@ class CreditCardBillPaymentService
             ]);
 
             $lockedUser->debitWallet(
+                $amount,
+                "Credit card bill pay for {$data['card']} (Order: {$data['orderid']})",
+                $record
+            );
+            $this->whitelabelBillingGate->debit(
+                $wl,
                 $amount,
                 "Credit card bill pay for {$data['card']} (Order: {$data['orderid']})",
                 $record
@@ -147,12 +196,35 @@ class CreditCardBillPaymentService
                 throw new \RuntimeException($message);
             }
 
-            $txn->update([
-                'status' => 'success',
-                'provider_txid' => isset($provider['txid']) ? (string) $provider['txid'] : null,
-                'utr' => $provider['utr'] ?? null,
-                'response_payload' => $provider,
-            ]);
+            DB::transaction(function () use ($txn, $user, $provider, $commissionAmount, $wlCommissionAmount) {
+                $wl = $this->whitelabelBillingGate->lockForUpdate($user);
+
+                $txn->update([
+                    'status' => 'success',
+                    'provider_txid' => isset($provider['txid']) ? (string) $provider['txid'] : null,
+                    'utr' => $provider['utr'] ?? null,
+                    'response_payload' => $provider,
+                ]);
+
+                /** @var User $lockedUser */
+                $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
+
+                if ($commissionAmount > 0) {
+                    $lockedUser->creditWallet(
+                        $commissionAmount,
+                        "Bill payment commission earned for {$txn->opcode} (Order: {$txn->order_id})",
+                        $txn
+                    );
+                    $lockedUser->addEarning($commissionAmount);
+                }
+
+                $this->whitelabelBillingGate->creditCommission(
+                    $wl,
+                    $wlCommissionAmount,
+                    "Bill payment commission for {$txn->opcode} (Order: {$txn->order_id})",
+                    $txn
+                );
+            });
 
             Log::info("Credit card bill pay success for order {$txn->order_id}");
 
@@ -183,8 +255,18 @@ class CreditCardBillPaymentService
             }
 
             /** @var User $user */
-            $user = User::query()->lockForUpdate()->findOrFail($locked->user_id);
-            $user->creditWallet(
+            $user = User::query()->findOrFail($locked->user_id);
+            $wl = $this->whitelabelBillingGate->lockForUpdate($user);
+
+            /** @var User $lockedUser */
+            $lockedUser = User::query()->lockForUpdate()->findOrFail($locked->user_id);
+            $lockedUser->creditWallet(
+                (float) $locked->amount,
+                "Refund for failed credit card bill pay (Order: {$locked->order_id})",
+                $locked
+            );
+            $this->whitelabelBillingGate->refund(
+                $wl,
                 (float) $locked->amount,
                 "Refund for failed credit card bill pay (Order: {$locked->order_id})",
                 $locked

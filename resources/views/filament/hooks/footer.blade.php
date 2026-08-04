@@ -1,7 +1,7 @@
 <footer class="fi-footer">
     <div class="crm-footer-bar">
         <div>
-            &copy; {{ now()->year }} {{ config('portal.name') }}
+            &copy; {{ now()->year }} {{ app(\App\Services\Portal\PortalSettings::class)->name() }}
             <span class="opacity-50">·</span>
             {{ $label }}
         </div>
