@@ -11,7 +11,6 @@ use App\Models\WalletTransaction;
 use App\Services\PlanApi\PlanApiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
-use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class PlanApiTest extends TestCase
@@ -398,14 +397,46 @@ class PlanApiTest extends TestCase
         $this->assertSame(100.0, (float) $whitelabel->fresh()->wallet_balance);
     }
 
+    public function test_production_token_with_wildcard_hits_live_aggregator_and_debits_fee(): void
+    {
+        $this->enableService(PlanApiService::SERVICE_OPERATOR_FETCH, 0.10);
+
+        $plain = $this->user->createToken('prod-test', ['*', 'environment:production'])->plainTextToken;
+
+        Http::fake([
+            'connect.ekychub.in/*' => Http::response([
+                'status' => 'Success',
+                'number' => '9431023xxx',
+                'company' => 'Airtel',
+                'circle' => 'Bihar',
+                'circle_code' => '52',
+                'message' => 'Operator fetched Successfully',
+            ], 200),
+        ]);
+
+        $this->withToken($plain)->postJson(route('api.v1.plan.operator-fetch'), [
+            'mobile' => '9431023126',
+            'orderid' => 'OPF_PROD',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.company', 'Airtel')
+            ->assertJsonPath('fee', 0.1)
+            ->assertJsonPath('wallet_balance', 99.9);
+
+        Http::assertSentCount(1);
+        $this->assertEquals(99.9, (float) $this->user->fresh()->wallet_balance);
+    }
+
     public function test_uat_token_returns_mock_operator_without_http_or_fee(): void
     {
         $this->enableService(PlanApiService::SERVICE_OPERATOR_FETCH, 0.10);
-        Sanctum::actingAs($this->user, ['*', 'environment:uat']);
+
+        $plain = $this->user->createToken('uat-test', ['*', 'environment:uat'])->plainTextToken;
 
         Http::fake();
 
-        $this->postJson(route('api.v1.plan.operator-fetch'), [
+        $this->withToken($plain)->postJson(route('api.v1.plan.operator-fetch'), [
             'mobile' => '9431023126',
             'orderid' => 'OPF_UAT',
         ])
@@ -424,11 +455,12 @@ class PlanApiTest extends TestCase
     public function test_uat_token_returns_mock_plans_without_http_or_fee(): void
     {
         $this->enableService(PlanApiService::SERVICE_OPERATOR_PLAN_FETCH, 0.25);
-        Sanctum::actingAs($this->user, ['*', 'environment:uat']);
+
+        $plain = $this->user->createToken('uat-plans-test', ['*', 'environment:uat'])->plainTextToken;
 
         Http::fake();
 
-        $this->postJson(route('api.v1.plan.operator-plan-fetch'), [
+        $this->withToken($plain)->postJson(route('api.v1.plan.operator-plan-fetch'), [
             'mobile' => '9431023126',
             'opcode' => 'J',
             'circle' => '52',

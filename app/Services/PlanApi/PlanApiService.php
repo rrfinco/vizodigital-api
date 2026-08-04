@@ -198,7 +198,26 @@ class PlanApiService
 
     private function isUatToken(User $user): bool
     {
-        return $user->tokenCan(EnvironmentSlug::Uat->tokenAbility());
+        $token = $user->currentAccessToken();
+
+        if ($token === null) {
+            return false;
+        }
+
+        // Prefer the abilities list on real PersonalAccessToken rows. Sanctum's
+        // tokenCan() treats "*" as matching every ability, so production tokens
+        // issued as ["*", "environment:production"] would look like UAT.
+        $abilities = $token->abilities ?? null;
+
+        if (is_array($abilities)) {
+            if (in_array(EnvironmentSlug::Production->tokenAbility(), $abilities, true)) {
+                return false;
+            }
+
+            return in_array(EnvironmentSlug::Uat->tokenAbility(), $abilities, true);
+        }
+
+        return false;
     }
 
     private function refundFee(User $user, float $fee, string $service, string $orderid): void

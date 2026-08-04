@@ -73,7 +73,7 @@ class RoundpayService
             $data = $response->json();
             Log::info('Roundpay Recharge Response', ['body' => $data]);
 
-            if (empty($data)) {
+            if (empty($data) || ! is_array($data)) {
                 return [
                     'status' => 'failed',
                     'msg' => 'Empty Response from Provider',
@@ -81,34 +81,40 @@ class RoundpayService
                 ];
             }
 
+            // Format=1 JSON may return either uppercase or lowercase keys.
+            $normalized = [];
+            foreach ($data as $key => $value) {
+                $normalized[strtoupper((string) $key)] = $value;
+            }
+
             // Roundpay Status values:
             // "2" = SUCCESS
             // "1" = PENDING
             // "3" = FAILED
-            $statusVal = (string) ($data['STATUS'] ?? '');
+            $statusVal = (string) ($normalized['STATUS'] ?? '');
 
             if ($statusVal === '2') {
                 return [
                     'status' => 'success',
-                    'msg' => $data['MSG'] ?? 'SUCCESS',
-                    'bal' => isset($data['BAL']) ? (float) $data['BAL'] : null,
-                    'rpid' => $data['RPID'] ?? null,
-                    'opid' => $data['OPID'] ?? null,
-                    'errorCode' => $data['ERRORCODE'] ?? '200',
+                    'msg' => $normalized['MSG'] ?? 'SUCCESS',
+                    'bal' => isset($normalized['BAL']) ? (float) $normalized['BAL'] : null,
+                    'rpid' => isset($normalized['RPID']) ? trim((string) $normalized['RPID']) : null,
+                    'opid' => isset($normalized['OPID']) ? trim((string) $normalized['OPID']) : null,
+                    'errorCode' => $normalized['ERRORCODE'] ?? '200',
                 ];
             } elseif ($statusVal === '1') {
                 return [
                     'status' => 'pending',
-                    'msg' => $data['MSG'] ?? 'PENDING',
-                    'bal' => isset($data['BAL']) ? (float) $data['BAL'] : null,
-                    'rpid' => $data['RPID'] ?? null,
-                    'errorCode' => $data['ERRORCODE'] ?? '200',
+                    'msg' => $normalized['MSG'] ?? 'PENDING',
+                    'bal' => isset($normalized['BAL']) ? (float) $normalized['BAL'] : null,
+                    'rpid' => isset($normalized['RPID']) ? trim((string) $normalized['RPID']) : null,
+                    'errorCode' => $normalized['ERRORCODE'] ?? '200',
                 ];
             } else {
                 return [
                     'status' => 'failed',
-                    'msg' => $data['MSG'] ?? 'Failed',
-                    'errorCode' => $data['ERRORCODE'] ?? '500',
+                    'msg' => $normalized['MSG'] ?? 'Failed',
+                    'errorCode' => $normalized['ERRORCODE'] ?? '500',
                 ];
             }
 

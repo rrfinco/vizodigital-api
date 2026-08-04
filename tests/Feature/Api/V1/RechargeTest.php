@@ -129,6 +129,39 @@ class RechargeTest extends TestCase
         $this->assertEquals('RPID_SUCCESS_123', $txn->rpid);
     }
 
+    public function test_recharge_success_with_lowercase_roundpay_keys(): void
+    {
+        $this->actingAs($this->user, 'sanctum');
+
+        Http::fake([
+            'api.roundpay.net/*' => Http::response([
+                'status' => 2,
+                'msg' => 'SUCCESS',
+                'bal' => '12846.22',
+                'errorcode' => '200',
+                'account' => '9876543210',
+                'amount' => '100',
+                'rpid' => 'RPID_LC_123',
+                'agentid' => '8822499',
+                'opid' => 'OPID_LC_456',
+            ], 200),
+        ]);
+
+        $this->postJson(route('api.v1.recharge'), [
+            'account_number' => '9876543210',
+            'amount' => 100,
+            'operator_sp_key' => 116,
+            'operator_type' => 'mobile',
+            'client_request_id' => 'CLIENT_TXN_LC',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.operator_ref', 'OPID_LC_456')
+            ->assertJsonPath('data.provider_txn_id', 'RPID_LC_123');
+
+        $this->assertEquals('success', RechargeTransaction::query()->where('client_request_id', 'CLIENT_TXN_LC')->value('status'));
+    }
+
     public function test_recharge_pending(): void
     {
         $this->actingAs($this->user, 'sanctum');
