@@ -85,6 +85,7 @@ class ApiEndpointForm
                                 'operator_plan_fetch' => 'Mobile plan fetch (operator_plan_fetch)',
                                 'dth_plan_fetch' => 'DTH plan fetch (dth_plan_fetch)',
                                 'dth_info' => 'DTH customer info (dth_info)',
+                                'credit_card_fetch' => 'Credit card bill fetch (credit_card_fetch)',
                             ])
                             ->searchable()
                             ->nullable(),

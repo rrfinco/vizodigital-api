@@ -6,7 +6,9 @@ use App\Exceptions\WhitelabelUnavailableException;
 use App\Models\BillPaymentTransaction;
 use App\Models\User;
 use App\Models\UserBillOperatorCommission;
+use App\Models\UserPlanApiAccess;
 use App\Models\WhitelabelBillOperatorCommission;
+use App\Models\WhitelabelPlanApiAccess;
 use App\Services\Inspay\InspayService;
 use App\Services\Whitelabel\WhitelabelBillingGate;
 use Illuminate\Support\Facades\DB;
@@ -14,21 +16,88 @@ use Illuminate\Support\Facades\Log;
 
 class CreditCardBillPaymentService
 {
+    public const SERVICE_CREDIT_CARD_FETCH = 'credit_card_fetch';
+
     public function __construct(
         private readonly InspayService $inspay,
         private readonly WhitelabelBillingGate $whitelabelBillingGate,
     ) {}
 
     /**
+     * Debit per-call fee from developer wallet (same path as Plan API), then fetch bill via Inspay.
+     * Fee is refunded if the provider call fails.
+     *
      * @param  array{mobile: string, card: string, opcode: string, orderid: string}  $data
-     * @return array{transaction: BillPaymentTransaction, provider: array<string, mixed>}
+     * @return array{transaction: BillPaymentTransaction, provider: array<string, mixed>, fee: float, wallet_balance: float}
+     *
+     * @throws WhitelabelUnavailableException
      */
     public function fetchBill(User $user, array $data): array
     {
+        $service = self::SERVICE_CREDIT_CARD_FETCH;
+        $orderid = $data['orderid'];
+
+        $access = UserPlanApiAccess::query()
+            ->where('user_id', $user->id)
+            ->where('service', $service)
+            ->first();
+
+        if (! $access || ! $access->isActive()) {
+            throw new \RuntimeException('This API is not enabled for your account. Contact admin.');
+        }
+
+        $userFee = round((float) $access->per_call_fee, 2);
+        $wlMargin = 0.0;
+        $isWhitelabelUser = (bool) $user->whitelabel_id;
+
+        if ($isWhitelabelUser) {
+            $wlAccess = WhitelabelPlanApiAccess::resolveFor((int) $user->whitelabel_id, $service);
+
+            if (! $wlAccess || ! $wlAccess['status']) {
+                throw new WhitelabelUnavailableException(
+                    WhitelabelUnavailableException::REASON_SUSPENDED,
+                    (int) $user->whitelabel_id
+                );
+            }
+
+            $wlFee = round($wlAccess['per_call_fee'], 2);
+            // Debit mirrors developer fee on float; margin credit = partner markup.
+            $wlMargin = max(0, round($userFee - $wlFee, 2));
+        }
+
+        $debited = false;
+        $refunded = false;
+
+        DB::transaction(function () use ($user, $userFee, $service, $orderid, &$debited) {
+            // Float must cover the developer-facing fee (wholesale mirror).
+            $wl = $this->whitelabelBillingGate->lockForDebit($user, $userFee);
+
+            /** @var User $lockedUser */
+            $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
+
+            if ($userFee > 0) {
+                if ((float) $lockedUser->wallet_balance < $userFee) {
+                    $available = (float) $lockedUser->wallet_balance;
+                    throw new \RuntimeException("Insufficient wallet balance. Please recharge your wallet. Required: ₹{$userFee}, Available: ₹{$available}");
+                }
+
+                $lockedUser->debitWallet(
+                    $userFee,
+                    "Plan API fee ({$service}) order {$orderid}",
+                );
+                $this->whitelabelBillingGate->debit(
+                    $wl,
+                    $userFee,
+                    "Plan API fee ({$service}) order {$orderid}",
+                );
+                $debited = true;
+            }
+        });
+
         $txn = BillPaymentTransaction::create([
             'user_id' => $user->id,
             'type' => 'credit_card_fetch',
-            'order_id' => $data['orderid'],
+            'order_id' => $orderid,
             'mobile' => $data['mobile'],
             'card' => $data['card'],
             'opcode' => $data['opcode'],
@@ -41,7 +110,7 @@ class CreditCardBillPaymentService
                 'mobile' => $data['mobile'],
                 'card' => $data['card'],
                 'opcode' => $data['opcode'],
-                'orderid' => $data['orderid'],
+                'orderid' => $orderid,
             ]);
 
             if (! $this->inspay->isSuccess($provider)) {
@@ -51,6 +120,11 @@ class CreditCardBillPaymentService
                     'error_message' => $message,
                     'response_payload' => $provider,
                 ]);
+
+                if ($debited) {
+                    $this->refundFetchFee($user, $userFee, $service, $orderid);
+                    $refunded = true;
+                }
 
                 throw new \RuntimeException($message);
             }
@@ -62,9 +136,22 @@ class CreditCardBillPaymentService
                 'response_payload' => $provider,
             ]);
 
+            if ($isWhitelabelUser && $wlMargin > 0) {
+                DB::transaction(function () use ($user, $wlMargin, $service, $orderid) {
+                    $wl = $this->whitelabelBillingGate->lockForUpdate($user);
+                    $this->whitelabelBillingGate->creditCommission(
+                        $wl,
+                        $wlMargin,
+                        "Plan API margin ({$service}) order {$orderid}",
+                    );
+                });
+            }
+
             return [
                 'transaction' => $txn->fresh(),
                 'provider' => $provider,
+                'fee' => $userFee,
+                'wallet_balance' => (float) $user->fresh()->wallet_balance,
             ];
         } catch (\Throwable $e) {
             if ($txn->status === 'pending') {
@@ -72,6 +159,10 @@ class CreditCardBillPaymentService
                     'status' => 'failed',
                     'error_message' => $e->getMessage(),
                 ]);
+            }
+
+            if ($debited && ! $refunded) {
+                $this->refundFetchFee($user, $userFee, $service, $orderid);
             }
 
             throw $e;
@@ -239,6 +330,25 @@ class CreditCardBillPaymentService
 
             throw $e;
         }
+    }
+
+    private function refundFetchFee(User $user, float $fee, string $service, string $orderid): void
+    {
+        DB::transaction(function () use ($user, $fee, $service, $orderid) {
+            $wl = $this->whitelabelBillingGate->lockForUpdate($user);
+
+            /** @var User $lockedUser */
+            $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id);
+            $lockedUser->creditWallet(
+                $fee,
+                "Plan API fee refund ({$service}) order {$orderid}",
+            );
+            $this->whitelabelBillingGate->refund(
+                $wl,
+                $fee,
+                "Plan API fee refund ({$service}) order {$orderid}",
+            );
+        });
     }
 
     /**

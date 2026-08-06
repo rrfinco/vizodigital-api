@@ -58,7 +58,18 @@ class CreditCardBillPaymentController extends Controller
                     'minimum_due' => isset($provider['minimum_due']) ? (float) $provider['minimum_due'] : null,
                     'orderid' => $validator->validated()['orderid'],
                 ],
+                'fee' => $result['fee'],
+                'wallet_balance' => $result['wallet_balance'],
             ]);
+        } catch (WhitelabelUnavailableException $e) {
+            return $e->toJsonResponse();
+        } catch (\RuntimeException $e) {
+            $status = str_contains($e->getMessage(), 'not enabled') ? 403 : 400;
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], $status);
         } catch (\Throwable $e) {
             return response()->json([
                 'status' => 'error',

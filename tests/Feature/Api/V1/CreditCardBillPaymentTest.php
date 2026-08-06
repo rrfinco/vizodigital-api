@@ -8,7 +8,9 @@ use App\Models\BillPaymentTransaction;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\UserBillOperatorCommission;
+use App\Models\UserPlanApiAccess;
 use App\Models\WalletTransaction;
+use App\Services\BillPayment\CreditCardBillPaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -35,6 +37,20 @@ class CreditCardBillPaymentTest extends TestCase
         Setting::setValue('inspay_token', 'TEST_TOKEN', 'payment');
     }
 
+    private function enableCreditCardFetch(float $fee = 0.10, bool $active = true): void
+    {
+        UserPlanApiAccess::query()->updateOrCreate(
+            [
+                'user_id' => $this->user->id,
+                'service' => CreditCardBillPaymentService::SERVICE_CREDIT_CARD_FETCH,
+            ],
+            [
+                'per_call_fee' => $fee,
+                'status' => $active,
+            ],
+        );
+    }
+
     public function test_bill_fetch_requires_authentication(): void
     {
         $this->postJson(route('api.v1.bill-payment.credit-card.fetch'), [
@@ -59,8 +75,24 @@ class CreditCardBillPaymentTest extends TestCase
             ->assertJsonPath('status', 'error');
     }
 
+    public function test_bill_fetch_requires_access(): void
+    {
+        $this->actingAs($this->user, 'sanctum');
+
+        $this->postJson(route('api.v1.bill-payment.credit-card.fetch'), [
+            'mobile' => '9876543210',
+            'card' => '3008',
+            'opcode' => 'ICIC',
+            'orderid' => 'ORD_NO_ACCESS',
+        ])
+            ->assertStatus(403)
+            ->assertJsonPath('status', 'error')
+            ->assertJsonPath('message', 'This API is not enabled for your account. Contact admin.');
+    }
+
     public function test_bill_fetch_success(): void
     {
+        $this->enableCreditCardFetch(0.25);
         $this->actingAs($this->user, 'sanctum');
 
         Http::fake([
@@ -86,7 +118,9 @@ class CreditCardBillPaymentTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('data.fetch_id', 'TSB974ca11c49f641e08b17690a43631819')
-            ->assertJsonPath('data.bill_amount', 7475.12);
+            ->assertJsonPath('data.bill_amount', 7475.12)
+            ->assertJsonPath('fee', 0.25)
+            ->assertJsonPath('wallet_balance', 9999.75);
 
         $this->assertDatabaseHas('bill_payment_transactions', [
             'user_id' => $this->user->id,
@@ -96,12 +130,69 @@ class CreditCardBillPaymentTest extends TestCase
             'fetch_id' => 'TSB974ca11c49f641e08b17690a43631819',
         ]);
 
+        $this->assertEquals(9999.75, (float) $this->user->fresh()->wallet_balance);
+
+        $this->assertDatabaseHas('wallet_transactions', [
+            'user_id' => $this->user->id,
+            'type' => 'debit',
+            'amount' => -0.25,
+        ]);
+
         Http::assertSent(function ($request) {
             return str_contains($request->url(), 'credit_card/bill_fetch')
                 && $request['username'] === 'TEST_USER'
                 && $request['token'] === 'TEST_TOKEN'
                 && $request['mobile'] === '9876543210';
         });
+    }
+
+    public function test_bill_fetch_refunds_fee_on_provider_failure(): void
+    {
+        $this->enableCreditCardFetch(0.50);
+        $this->actingAs($this->user, 'sanctum');
+
+        Http::fake([
+            'inspay.in/*' => Http::response([
+                'status' => 'Failed',
+                'message' => 'Invalid card details',
+            ], 200),
+        ]);
+
+        $this->postJson(route('api.v1.bill-payment.credit-card.fetch'), [
+            'mobile' => '9876543210',
+            'card' => '3008',
+            'opcode' => 'ICIC',
+            'orderid' => 'ORD_FAIL_FETCH',
+        ])
+            ->assertStatus(400)
+            ->assertJsonPath('status', 'error')
+            ->assertJsonPath('message', 'Invalid card details');
+
+        $this->assertEquals(10000.0, (float) $this->user->fresh()->wallet_balance);
+
+        $this->assertDatabaseHas('bill_payment_transactions', [
+            'user_id' => $this->user->id,
+            'type' => 'credit_card_fetch',
+            'order_id' => 'ORD_FAIL_FETCH',
+            'status' => 'failed',
+        ]);
+    }
+
+    public function test_bill_fetch_insufficient_wallet(): void
+    {
+        $this->user->update(['wallet_balance' => 0.05]);
+        $this->enableCreditCardFetch(0.10);
+        $this->actingAs($this->user, 'sanctum');
+
+        $this->postJson(route('api.v1.bill-payment.credit-card.fetch'), [
+            'mobile' => '9876543210',
+            'card' => '3008',
+            'opcode' => 'ICIC',
+            'orderid' => 'ORD_LOW_BAL',
+        ])
+            ->assertStatus(400)
+            ->assertJsonPath('status', 'error')
+            ->assertJsonPath('message', 'Insufficient wallet balance. Please recharge your wallet. Required: ₹0.1, Available: ₹0.05');
     }
 
     public function test_bill_pay_requires_pan_for_large_amount(): void

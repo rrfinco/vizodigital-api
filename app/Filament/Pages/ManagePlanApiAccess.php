@@ -59,6 +59,12 @@ class ManagePlanApiAccess extends Page
             'description' => 'Fetch DTH customer name, balance, and minimum recharge.',
             'default_fee' => '0.10',
         ],
+        [
+            'key' => 'credit_card_fetch',
+            'label' => 'Credit card bill fetch',
+            'description' => 'Fetch credit card bill details (due amount, fetch_id) before payment.',
+            'default_fee' => '0.10',
+        ],
     ];
 
     public static function canAccess(): bool

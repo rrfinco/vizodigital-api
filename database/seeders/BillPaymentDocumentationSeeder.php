@@ -13,6 +13,7 @@ use App\Models\CodeSample;
 use App\Models\EndpointExample;
 use App\Models\EndpointRequestBody;
 use App\Models\EndpointResponse;
+use App\Services\BillPayment\CreditCardBillPaymentService;
 use Illuminate\Database\Seeder;
 
 class BillPaymentDocumentationSeeder extends Seeder
@@ -86,10 +87,17 @@ Fetch due details for a specific credit card before processing a payment.
 
 Returns a `fetch_id` that is **required** for the Bill Pay API.
 
+**Access & billing**
+- This endpoint must be enabled for your account under **Plan API access** (`credit_card_fetch`).
+- Fee is deducted from your **developer wallet** before the provider call.
+- Failed provider calls refund the fee automatically.
+- Response includes `fee` and `wallet_balance`.
+
 Your request is authenticated with a Bearer token. Provider credentials are applied server-side — never send Inspay username/token from the client.
 MD,
                 'status' => PublishStatus::Published,
                 'rate_limit' => '60/min',
+                'access_service_key' => CreditCardBillPaymentService::SERVICE_CREDIT_CARD_FETCH,
                 'sort_order' => 1,
             ]
         );
@@ -143,6 +151,8 @@ MD,
                         'minimum_due' => 2344,
                         'orderid' => 'UNIQUE_ID_123',
                     ],
+                    'fee' => 0.10,
+                    'wallet_balance' => 999.90,
                 ],
                 'sort_order' => 1,
             ]
@@ -174,6 +184,8 @@ MD,
                             'minimum_due' => 2344,
                             'orderid' => 'UNIQUE_ID_123',
                         ],
+                        'fee' => 0.10,
+                        'wallet_balance' => 999.90,
                     ],
                     'response_status' => 200,
                     'description' => 'Successful bill fetch with fetch_id for payment.',
