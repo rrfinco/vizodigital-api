@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Whitelabels\Schemas;
 
+use App\Enums\RechargeProvider;
 use App\Enums\WhitelabelStatus;
 use App\Models\User;
 use App\Models\Whitelabel;
@@ -40,6 +41,12 @@ class WhitelabelForm
                             ->options(WhitelabelStatus::class)
                             ->required()
                             ->default(WhitelabelStatus::Active->value),
+                        Select::make('recharge_provider')
+                            ->label('Recharge provider')
+                            ->options(RechargeProvider::class)
+                            ->required()
+                            ->default(RechargeProvider::Roundpay->value)
+                            ->helperText('All developers under this white-label use this recharge API.'),
                         TextInput::make('wallet_balance')
                             ->label('Wallet balance')
                             ->disabled()

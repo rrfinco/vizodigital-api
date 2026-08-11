@@ -9,18 +9,15 @@ CMS-driven API Documentation Portal (Laravel 12 · Blade · Tailwind · Docker).
 | Service | URL |
 |---------|-----|
 | App | http://localhost:9021 |
-| phpMyAdmin | http://localhost:9024 |
 
-> **Note:** Requested phpMyAdmin port was `9022`, but that port is already bound by `payin_app` on this machine. Compose currently publishes phpMyAdmin on **9024**. Change `docker-compose.yml` back to `9022:80` once that port is free.
+Database is **remote only** (PROD `vizoapi` or UAT `vizodbuat`). There is no local MySQL / phpMyAdmin in Compose.
 
 ## Quick start (Docker)
 
 ```bash
-# 1. Environment
-cp .env.example .env
-# Ensure APP_KEY exists (Docker entrypoint can generate it)
+# 1. Ensure .env exists with remote DB_* (PROD or UAT) and APP_KEY
 
-# 2. Build PHP image & start stack
+# 2. Build PHP image & start stack (app + nginx only)
 docker compose up -d --build
 
 # 3. Build frontend assets (first time / after CSS/JS changes)
@@ -33,23 +30,21 @@ Then open:
 
 - Portal: http://localhost:9021  
 - Docs shell: http://localhost:9021/docs  
-- phpMyAdmin: http://localhost:9024  
 
-Default MySQL credentials (see `.env`):
+Switch PROD ↔ UAT in `.env` (one DB block active), then recreate app so env reloads:
 
-- Database: `api_portal`
-- User: `portal` / `secret`
-- Root: `rootsecret`
+```bash
+docker compose up -d --force-recreate app
+```
 
 ## Local PHP (without Docker)
 
-Requires PHP 8.3+, Composer, Node 22+, MySQL.
+Requires PHP 8.3+, Composer, Node 22+. Point `DB_*` at remote PROD or UAT.
 
 ```bash
 composer install
-cp .env.example .env
+# Ensure .env exists with remote DB_* and APP_KEY
 php artisan key:generate
-# Point DB_* at your MySQL, then:
 php artisan migrate
 npm install && npm run build
 php artisan serve --port=9021
@@ -58,7 +53,7 @@ php artisan serve --port=9021
 ## Module 0 deliverables
 
 - Laravel 12 application
-- Docker Compose (PHP 8.3-FPM, Nginx, MySQL 8.4, phpMyAdmin)
+- Docker Compose (PHP 8.3-FPM, Nginx) — remote MariaDB only
 - Design system: Inter, primary `#2563EB`, radius 16px, light/dark mode
 - Landing page + docs layout shell (empty CMS state)
 - `config/portal.php` placeholders for environments & sidebar

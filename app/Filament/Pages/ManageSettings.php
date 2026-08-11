@@ -66,6 +66,9 @@ class ManageSettings extends Page
             'inspay_token' => $settings->inspayToken(),
             'ekychub_username' => $settings->ekycHubUsername(),
             'ekychub_token' => $settings->ekycHubToken(),
+            'mokshiq_token' => $settings->mokshiqToken(),
+            'mokshiq_pin' => $settings->mokshiqPin(),
+            'mokshiq_origin' => $settings->mokshiqOrigin(),
             'wallet_online_enabled' => $settings->walletOnlineEnabled(),
             'wallet_bank_transfer_enabled' => $settings->walletBankTransferEnabled(),
             'bank_account_name' => $settings->bankAccountName(),
@@ -119,10 +122,9 @@ class ManageSettings extends Page
                             ->maxLength(255),
                         TextInput::make('roundpay_token')
                             ->label('Roundpay API Token')
-                            ->password()
-                            ->revealable()
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->autocomplete(false),
                         TextInput::make('roundpay_route_type')
                             ->label('Route Type')
                             ->required()
@@ -160,15 +162,13 @@ class ManageSettings extends Page
                             ->maxLength(255),
                         TextInput::make('rrfinco_api_token')
                             ->label('API Bearer Token')
-                            ->password()
-                            ->revealable()
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->autocomplete(false),
                         TextInput::make('rrfinco_salt_key')
                             ->label('Salt Key')
-                            ->password()
-                            ->revealable()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->autocomplete(false),
                     ]),
 
                 Section::make('Inspay Configuration')
@@ -180,9 +180,8 @@ class ManageSettings extends Page
                             ->maxLength(255),
                         TextInput::make('inspay_token')
                             ->label('Token')
-                            ->password()
-                            ->revealable()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->autocomplete(false),
                     ]),
 
                 Section::make('EkycHub Configuration')
@@ -194,9 +193,28 @@ class ManageSettings extends Page
                             ->maxLength(255),
                         TextInput::make('ekychub_token')
                             ->label('Token')
-                            ->password()
-                            ->revealable()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->autocomplete(false),
+                    ]),
+
+                Section::make('Mokshiq Recharge Configuration')
+                    ->description('Credentials for the Mokshiq mobile recharge API. Used when a user or white-label is assigned the Mokshiq provider.')
+                    ->columns(3)
+                    ->schema([
+                        TextInput::make('mokshiq_token')
+                            ->label('Token')
+                            ->maxLength(255)
+                            ->autocomplete(false)
+                            ->helperText('Authorization Bearer token'),
+                        TextInput::make('mokshiq_pin')
+                            ->label('PIN')
+                            ->maxLength(64)
+                            ->autocomplete(false)
+                            ->helperText('Transaction PIN sent with each recharge'),
+                        TextInput::make('mokshiq_origin')
+                            ->label('Partner URL')
+                            ->maxLength(255)
+                            ->helperText('Origin header — your registered client origin'),
                     ]),
 
                 Section::make('Wallet funding methods')
@@ -210,31 +228,23 @@ class ManageSettings extends Page
                         Toggle::make('wallet_bank_transfer_enabled')
                             ->label('Enable bank transfer')
                             ->helperText('Users transfer to your account, then you approve')
-                            ->live()
                             ->default(false),
                         TextInput::make('bank_account_name')
                             ->label('Account holder name')
-                            ->maxLength(255)
-                            ->visible(fn ($get): bool => (bool) $get('wallet_bank_transfer_enabled'))
-                            ->required(fn ($get): bool => (bool) $get('wallet_bank_transfer_enabled')),
+                            ->maxLength(255),
                         TextInput::make('bank_account_number')
                             ->label('Account number')
                             ->maxLength(64)
-                            ->visible(fn ($get): bool => (bool) $get('wallet_bank_transfer_enabled'))
-                            ->required(fn ($get): bool => (bool) $get('wallet_bank_transfer_enabled')),
+                            ->autocomplete(false),
                         TextInput::make('bank_ifsc')
                             ->label('IFSC code')
-                            ->maxLength(32)
-                            ->visible(fn ($get): bool => (bool) $get('wallet_bank_transfer_enabled'))
-                            ->required(fn ($get): bool => (bool) $get('wallet_bank_transfer_enabled')),
+                            ->maxLength(32),
                         TextInput::make('bank_name')
                             ->label('Bank name')
-                            ->maxLength(255)
-                            ->visible(fn ($get): bool => (bool) $get('wallet_bank_transfer_enabled')),
+                            ->maxLength(255),
                         TextInput::make('bank_upi_id')
                             ->label('UPI ID (optional)')
                             ->maxLength(255)
-                            ->visible(fn ($get): bool => (bool) $get('wallet_bank_transfer_enabled'))
                             ->columnSpanFull(),
                     ]),
             ]);
@@ -267,6 +277,10 @@ class ManageSettings extends Page
 
         $settings->set('ekychub_username', $state['ekychub_username'] ?? '', 'payment');
         $settings->set('ekychub_token', $state['ekychub_token'] ?? '', 'payment');
+
+        $settings->set('mokshiq_token', $state['mokshiq_token'] ?? '', 'recharge');
+        $settings->set('mokshiq_pin', $state['mokshiq_pin'] ?? '', 'recharge');
+        $settings->set('mokshiq_origin', $state['mokshiq_origin'] ?? '', 'recharge');
 
         $settings->set('wallet_online_enabled', (bool) ($state['wallet_online_enabled'] ?? false), 'payment');
         $settings->set('wallet_bank_transfer_enabled', (bool) ($state['wallet_bank_transfer_enabled'] ?? false), 'payment');

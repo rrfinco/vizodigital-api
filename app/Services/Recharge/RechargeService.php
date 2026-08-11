@@ -2,6 +2,7 @@
 
 namespace App\Services\Recharge;
 
+use App\Enums\RechargeProvider;
 use App\Exceptions\WhitelabelUnavailableException;
 use App\Filament\Pages\ManageOperatorCommissions;
 use App\Models\RechargeTransaction;
@@ -17,24 +18,26 @@ class RechargeService
 {
     public function __construct(
         protected RoundpayService $roundpayService,
+        protected MokshiqService $mokshiqService,
+        protected RechargeProviderResolver $providerResolver,
         protected WhitelabelBillingGate $whitelabelBillingGate,
     ) {}
 
     /**
      * Process a recharge request
      *
-     * @param User $user The authenticated developer user
-     * @param array{
+     * @param  array{
      *     account_number: string,
      *     amount: float,
      *     operator_sp_key: int,
      *     operator_type: string,
      *     client_request_id?: string,
+     *     circle?: string|null,
      *     geocode?: string,
      *     customer_number?: string,
      *     pincode?: string
-     * } $data
-     * @return RechargeTransaction
+     * }  $data
+     *
      * @throws \Exception
      * @throws WhitelabelUnavailableException
      */
@@ -46,9 +49,29 @@ class RechargeService
         $type = strtolower($data['operator_type']); // mobile or dth
         $clientRequestId = isset($data['client_request_id']) ? trim((string) $data['client_request_id']) : null;
         $clientRequestId = $clientRequestId === '' ? null : $clientRequestId;
+        $circle = isset($data['circle']) ? trim((string) $data['circle']) : null;
+        $circle = $circle === '' ? null : $circle;
         $geocode = $data['geocode'] ?? null;
         $customerNumber = $data['customer_number'] ?? null;
         $pincode = $data['pincode'] ?? null;
+
+        $provider = $this->providerResolver->forUser($user);
+
+        if ($provider === RechargeProvider::Mokshiq && $type === 'mobile' && $circle === null) {
+            throw ValidationException::withMessages([
+                'circle' => 'Circle is required for Mokshiq recharges. Call operator/plan fetch first, then pass the circle name.',
+            ]);
+        }
+
+        $mokshiqOperator = null;
+        if ($provider === RechargeProvider::Mokshiq) {
+            $mokshiqOperator = MokshiqOperatorMap::operatorName($spKey);
+            if ($mokshiqOperator === null) {
+                throw ValidationException::withMessages([
+                    'operator_sp_key' => "Operator SPKey [{$spKey}] is not mapped for Mokshiq.",
+                ]);
+            }
+        }
 
         if ($clientRequestId !== null) {
             $duplicate = RechargeTransaction::query()
@@ -119,11 +142,13 @@ class RechargeService
         /** @var RechargeTransaction $rechargeTxn */
         $rechargeTxn = DB::transaction(function () use (
             $user,
+            $provider,
             $clientRequestId,
             $apiRequestId,
             $spKey,
             $type,
             $accountNumber,
+            $circle,
             $amount,
             $commissionPercentage,
             $commissionAmount,
@@ -141,11 +166,13 @@ class RechargeService
 
             $txn = RechargeTransaction::create([
                 'user_id' => $lockedUser->id,
+                'provider' => $provider,
                 'client_request_id' => $clientRequestId,
                 'api_request_id' => $apiRequestId,
                 'operator_sp_key' => $spKey,
                 'operator_type' => $type,
                 'account_number' => $accountNumber,
+                'circle' => $circle,
                 'amount' => $amount,
                 'commission_percentage' => $commissionPercentage,
                 'commission_amount' => $commissionAmount,
@@ -165,28 +192,45 @@ class RechargeService
         });
 
         // 6. Execute external API request outside DB transaction
-        Log::info("Executing Roundpay call for transaction: {$rechargeTxn->id} (APIRequestID: {$apiRequestId})");
+        Log::info("Executing {$provider->value} call for transaction: {$rechargeTxn->id} (APIRequestID: {$apiRequestId})");
 
-        $roundpayResult = $this->roundpayService->executeRecharge(
-            $apiRequestId,
-            $accountNumber,
-            $amount,
-            (string) $spKey,
-            $geocode,
-            $customerNumber,
-            $pincode
-        );
+        if ($provider === RechargeProvider::Mokshiq) {
+            if ($type === 'mobile') {
+                $providerResult = $this->mokshiqService->createMobileRecharge([
+                    'operator' => (string) $mokshiqOperator,
+                    'number' => $accountNumber,
+                    'amount' => $amount,
+                    'circle' => (string) $circle,
+                ]);
+            } else {
+                $providerResult = $this->mokshiqService->createDthRecharge([
+                    'operator' => (string) $mokshiqOperator,
+                    'number' => $accountNumber,
+                    'amount' => $amount,
+                ]);
+            }
+        } else {
+            $providerResult = $this->roundpayService->executeRecharge(
+                $apiRequestId,
+                $accountNumber,
+                $amount,
+                (string) $spKey,
+                $geocode,
+                $customerNumber,
+                $pincode
+            );
+        }
 
         // 7. Update status + commission / refund
-        if ($roundpayResult['status'] === 'success') {
-            DB::transaction(function () use ($rechargeTxn, $user, $roundpayResult, $wlCommissionAmount) {
+        if ($providerResult['status'] === 'success') {
+            DB::transaction(function () use ($rechargeTxn, $user, $providerResult, $wlCommissionAmount) {
                 $wl = $this->whitelabelBillingGate->lockForUpdate($user);
 
                 $rechargeTxn->update([
                     'status' => 'success',
-                    'rpid' => $roundpayResult['rpid'] ?? null,
-                    'opid' => $roundpayResult['opid'] ?? null,
-                    'error_code' => $roundpayResult['errorCode'] ?? '200',
+                    'rpid' => $providerResult['rpid'] ?? null,
+                    'opid' => $providerResult['opid'] ?? null,
+                    'error_code' => $providerResult['errorCode'] ?? '200',
                 ]);
 
                 /** @var User $lockedUser */
@@ -208,20 +252,20 @@ class RechargeService
                     $rechargeTxn
                 );
             });
-        } elseif ($roundpayResult['status'] === 'pending') {
+        } elseif ($providerResult['status'] === 'pending') {
             $rechargeTxn->update([
                 'status' => 'pending',
-                'rpid' => $roundpayResult['rpid'] ?? null,
-                'error_code' => $roundpayResult['errorCode'] ?? '200',
+                'rpid' => $providerResult['rpid'] ?? null,
+                'error_code' => $providerResult['errorCode'] ?? '200',
             ]);
         } else {
-            DB::transaction(function () use ($rechargeTxn, $user, $netAmount, $roundpayResult, $accountNumber) {
+            DB::transaction(function () use ($rechargeTxn, $user, $netAmount, $providerResult, $accountNumber) {
                 $wl = $this->whitelabelBillingGate->lockForUpdate($user);
 
                 $rechargeTxn->update([
                     'status' => 'failed',
-                    'error_code' => $roundpayResult['errorCode'] ?? '500',
-                    'error_message' => $roundpayResult['msg'] ?? 'Transaction Failed',
+                    'error_code' => $providerResult['errorCode'] ?? '500',
+                    'error_message' => $providerResult['msg'] ?? 'Transaction Failed',
                 ]);
 
                 /** @var User $lockedUser */

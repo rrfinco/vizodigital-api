@@ -220,6 +220,26 @@ class PortalSettings
         return (string) $this->get('ekychub_token', '');
     }
 
+    public function mokshiqToken(): string
+    {
+        return (string) $this->get('mokshiq_token', '');
+    }
+
+    public function mokshiqPin(): string
+    {
+        return (string) $this->get('mokshiq_pin', '');
+    }
+
+    public function mokshiqOrigin(): string
+    {
+        return (string) $this->get('mokshiq_origin', '');
+    }
+
+    public function mokshiqApiUrl(): string
+    {
+        return 'https://api.mokshiq.in';
+    }
+
     public function walletOnlineEnabled(): bool
     {
         return (bool) $this->get('wallet_online_enabled', true);

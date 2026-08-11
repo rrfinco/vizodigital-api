@@ -29,6 +29,7 @@ class RechargeController extends Controller
             'operator_sp_key' => ['required', 'integer'],
             'operator_type' => ['required', 'string', 'in:mobile,dth,MOBILE,DTH'],
             'client_request_id' => ['nullable', 'string', 'max:100'],
+            'circle' => ['nullable', 'string', 'max:100'],
             'geocode' => ['nullable', 'string', 'max:50'],
             'customer_number' => ['nullable', 'string', 'max:50'],
             'pincode' => ['nullable', 'string', 'max:20'],

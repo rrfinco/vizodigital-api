@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\OnboardingStatus;
+use App\Enums\RechargeProvider;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -29,6 +30,7 @@ class User extends Authenticatable implements FilamentUser
         'company_name',
         'phone',
         'whitelabel_id',
+        'recharge_provider',
         'wallet_balance',
         'onboarding_status',
         'kyc_token',
@@ -58,6 +60,7 @@ class User extends Authenticatable implements FilamentUser
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'onboarding_status' => OnboardingStatus::class,
+            'recharge_provider' => RechargeProvider::class,
             'kyc_token_expires_at' => 'datetime',
             'kyc_submitted_at' => 'datetime',
             'approved_at' => 'datetime',

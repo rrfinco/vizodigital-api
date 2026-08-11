@@ -8,19 +8,13 @@ services:
     working_dir: /var/www/html
     volumes:
       - .:/var/www/html
+    env_file:
+      - .env
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_URL: http://localhost:9021
-      DB_CONNECTION: mysql
-      DB_HOST: mysql
-      DB_PORT: 3306
-      DB_DATABASE: ${DB_DATABASE:-api_portal}
-      DB_USERNAME: ${DB_USERNAME:-portal}
-      DB_PASSWORD: ${DB_PASSWORD:-secret}
-    depends_on:
-      mysql:
-        condition: service_healthy
+      # DB_* come from .env — remote PROD or UAT only (no local MySQL).
     networks:
       - portal
 
@@ -35,45 +29,6 @@ services:
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - app
-    networks:
-      - portal
-
-  mysql:
-    image: mysql:8.4
-    container_name: api-portal-mysql
-    restart: unless-stopped
-    environment:
-      MYSQL_DATABASE: ${DB_DATABASE:-api_portal}
-      MYSQL_USER: ${DB_USERNAME:-portal}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
-    volumes:
-      - portal_mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_ROOT_PASSWORD:-rootsecret}"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    networks:
-      - portal
-
-  phpmyadmin:
-    image: phpmyadmin:5.2
-    container_name: api-portal-phpmyadmin
-    restart: unless-stopped
-    ports:
-      # 9022 is occupied on this host by another project (payin_app).
-      # Intended mapping was 9022; using 9024 so the stack can start.
-      - "9024:80"
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_USER: ${DB_USERNAME:-portal}
-      PMA_PASSWORD: ${DB_PASSWORD:-secret}
-      UPLOAD_LIMIT: 64M
-    depends_on:
-      mysql:
-        condition: service_healthy
     networks:
       - portal
 
@@ -92,6 +47,3 @@ services:
 networks:
   portal:
     driver: bridge
-
-volumes:
-  portal_mysql_data:

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RechargeProvider;
 use App\Enums\WhitelabelDomainRole;
 use App\Enums\WhitelabelStatus;
 use Database\Factories\WhitelabelFactory;
@@ -20,6 +21,7 @@ class Whitelabel extends Model
         'name',
         'slug',
         'status',
+        'recharge_provider',
         'wallet_balance',
         'owner_user_id',
         'brand_name',
@@ -32,6 +34,7 @@ class Whitelabel extends Model
     {
         return [
             'status' => WhitelabelStatus::class,
+            'recharge_provider' => RechargeProvider::class,
             'wallet_balance' => 'decimal:4',
         ];
     }

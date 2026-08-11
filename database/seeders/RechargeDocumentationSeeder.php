@@ -141,6 +141,9 @@ Submit a **{$label}** request against your developer wallet.
 - Set `operator_type` to `{$operatorType}`.
 - Amount is deducted from wallet before the provider call; failed attempts are refunded.
 - Use a unique `client_request_id` to avoid duplicate processing.
+- Admin assigns one recharge provider per platform developer (or per white-label for WL developers): **Roundpay** or **Mokshiq**.
+- For **Mokshiq** mobile recharges, first call operator/plan fetch, then pass `circle` (circle name string from the fetch response).
+- For Mokshiq **DTH** recharges, `circle` is not required.
 MD,
                 'status' => PublishStatus::Published,
                 'rate_limit' => '60/min',
@@ -156,13 +159,14 @@ MD,
             [
                 'description' => "{$label} request body",
                 'required' => true,
-                'example' => [
+                'example' => array_filter([
                     'account_number' => $accountNumber,
                     'amount' => 10,
                     'operator_sp_key' => 1,
                     'operator_type' => $operatorType,
                     'client_request_id' => 'UNIQUE_ID_123',
-                ],
+                    'circle' => $operatorType === 'mobile' ? 'Bihar' : null,
+                ], fn ($v) => $v !== null),
                 'schema' => [
                     'type' => 'object',
                     'required' => ['account_number', 'amount', 'operator_sp_key', 'operator_type'],
@@ -172,6 +176,7 @@ MD,
                         'operator_sp_key' => ['type' => 'integer', 'description' => 'Operator code / SP key'],
                         'operator_type' => ['type' => 'string', 'enum' => [$operatorType]],
                         'client_request_id' => ['type' => 'string', 'description' => 'Unique client order ID'],
+                        'circle' => ['type' => 'string', 'description' => 'Circle name from operator/plan fetch. Required when your account uses the Mokshiq provider (mobile only).'],
                         'geocode' => ['type' => 'string'],
                         'customer_number' => ['type' => 'string'],
                         'pincode' => ['type' => 'string'],
@@ -283,6 +288,9 @@ MD,
             );
 
             $baseUrl = rtrim((string) $env->base_url, '/');
+            $circleLine = $operatorType === 'mobile'
+                ? "    \"circle\": \"Bihar\",\n"
+                : '';
             $curl = <<<BASH
 curl -X POST "{$baseUrl}/api/v1/recharge" \\
   -H "Authorization: Bearer YOUR_API_TOKEN" \\
@@ -292,7 +300,7 @@ curl -X POST "{$baseUrl}/api/v1/recharge" \\
     "amount": 10,
     "operator_sp_key": 1,
     "operator_type": "{$operatorType}",
-    "client_request_id": "UNIQUE_ID_123"
+{$circleLine}    "client_request_id": "UNIQUE_ID_123"
   }'
 BASH;
 

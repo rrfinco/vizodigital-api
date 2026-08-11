@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Enums\RechargeProvider;
 use App\Enums\Role;
 use App\Models\User;
 use App\Models\UserOperatorCommission;
@@ -28,6 +29,8 @@ class ManageOperatorCommissions extends Page
     protected string $view = 'filament.admin.pages.manage-operator-commissions';
 
     public ?int $selectedUserId = null;
+
+    public string $rechargeProvider = 'roundpay';
 
     /**
      * @var array<string, array{commission_percentage: string, status: string, operator_id: int}>
@@ -93,6 +96,7 @@ class ManageOperatorCommissions extends Page
     public function hydrateRows(): void
     {
         $this->rows = [];
+        $this->rechargeProvider = RechargeProvider::Roundpay->value;
 
         $operators = self::OPERATORS;
 
@@ -107,6 +111,14 @@ class ManageOperatorCommissions extends Page
             }
 
             return;
+        }
+
+        $user = User::query()->find($this->selectedUserId);
+        if ($user) {
+            $provider = $user->recharge_provider instanceof RechargeProvider
+                ? $user->recharge_provider
+                : RechargeProvider::tryFrom((string) $user->recharge_provider);
+            $this->rechargeProvider = ($provider ?? RechargeProvider::Roundpay)->value;
         }
 
         $existing = UserOperatorCommission::query()
@@ -144,6 +156,18 @@ class ManageOperatorCommissions extends Page
             throw ValidationException::withMessages([
                 'selectedUserId' => 'Selected user not found.',
             ]);
+        }
+
+        $provider = RechargeProvider::tryFrom($this->rechargeProvider);
+        if (! $provider) {
+            throw ValidationException::withMessages([
+                'rechargeProvider' => 'Invalid recharge provider.',
+            ]);
+        }
+
+        // Platform developers: store provider on the user. WL developers inherit from the whitelabel.
+        if ($user->whitelabel_id === null) {
+            $user->forceFill(['recharge_provider' => $provider])->save();
         }
 
         foreach (self::OPERATORS as $operator) {
@@ -209,6 +233,27 @@ class ManageOperatorCommissions extends Page
         return $this->developerUsers()
             ->map(fn (User $u) => ['id' => $u->id, 'label' => $u->company_name ?: $u->name])
             ->values();
+    }
+
+    public function selectedUserIsPlatformDeveloper(): bool
+    {
+        if (! $this->selectedUserId) {
+            return false;
+        }
+
+        $user = User::query()->find($this->selectedUserId);
+
+        return $user !== null && $user->whitelabel_id === null;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function rechargeProviderOptions(): array
+    {
+        return collect(RechargeProvider::cases())
+            ->mapWithKeys(fn (RechargeProvider $p) => [$p->value => $p->label()])
+            ->all();
     }
 }
 

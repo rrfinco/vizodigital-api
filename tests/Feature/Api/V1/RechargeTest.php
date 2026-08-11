@@ -333,4 +333,190 @@ class RechargeTest extends TestCase
         $this->assertSame(1, RechargeTransaction::query()->where('client_request_id', 'UNIQUE_ORDER_42')->count());
         Http::assertSentCount(1);
     }
+
+    public function test_mokshiq_requires_circle(): void
+    {
+        $this->user->update(['recharge_provider' => \App\Enums\RechargeProvider::Mokshiq]);
+        $this->actingAs($this->user, 'sanctum');
+
+        \App\Models\Setting::setValue('mokshiq_token', 'MK_TOKEN', 'recharge');
+        \App\Models\Setting::setValue('mokshiq_pin', '2242', 'recharge');
+        \App\Models\Setting::setValue('mokshiq_origin', 'https://partner.example.com', 'recharge');
+
+        $this->postJson(route('api.v1.recharge'), [
+            'account_number' => '9876543210',
+            'amount' => 10,
+            'operator_sp_key' => 116,
+            'operator_type' => 'mobile',
+            'client_request_id' => 'MK_NO_CIRCLE',
+        ])
+            ->assertStatus(422)
+            ->assertJsonPath('status', 'error');
+
+        Http::assertNothingSent();
+    }
+
+    public function test_mokshiq_success_dth_debits_wallet(): void
+    {
+        $this->user->update(['recharge_provider' => \App\Enums\RechargeProvider::Mokshiq]);
+        $this->actingAs($this->user, 'sanctum');
+
+        \App\Models\Setting::setValue('mokshiq_token', 'MK_TOKEN', 'recharge');
+        \App\Models\Setting::setValue('mokshiq_pin', '2242', 'recharge');
+        \App\Models\Setting::setValue('mokshiq_origin', 'https://partner.example.com', 'recharge');
+
+        Http::fake([
+            'api.mokshiq.in/*' => Http::response([
+                'status' => 'success',
+                'message' => 'Recharge Successful',
+                'txn_id' => 'MK_DTH_TXN_001',
+                'opid' => 'MK_DTH_OP_001',
+            ], 200),
+        ]);
+
+        $this->postJson(route('api.v1.recharge'), [
+            'account_number' => '1234567890',
+            'amount' => 100,
+            'operator_sp_key' => 51, // Airtel Digital TV
+            'operator_type' => 'dth',
+            'client_request_id' => 'MK_DTH_OK_1',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.provider_txn_id', 'MK_DTH_TXN_001')
+            ->assertJsonPath('data.operator_ref', 'MK_DTH_OP_001');
+
+        $this->user->refresh();
+        // Default commission on Airtel DTH is 3% => net debit 97
+        $this->assertEquals(403.0000, (float) $this->user->wallet_balance);
+
+        $txn = RechargeTransaction::query()->where('client_request_id', 'MK_DTH_OK_1')->first();
+        $this->assertNotNull($txn);
+        $this->assertEquals(\App\Enums\RechargeProvider::Mokshiq, $txn->provider);
+        $this->assertNull($txn->circle);
+
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), 'create_dth_recharge')
+                && $request->hasHeader('Authorization', 'Bearer MK_TOKEN')
+                && $request->hasHeader('Origin', 'https://partner.example.com');
+        });
+    }
+
+    public function test_mokshiq_success_debits_wallet(): void
+    {
+        $this->user->update(['recharge_provider' => \App\Enums\RechargeProvider::Mokshiq]);
+        $this->actingAs($this->user, 'sanctum');
+
+        \App\Models\Setting::setValue('mokshiq_token', 'MK_TOKEN', 'recharge');
+        \App\Models\Setting::setValue('mokshiq_pin', '2242', 'recharge');
+        \App\Models\Setting::setValue('mokshiq_origin', 'https://partner.example.com', 'recharge');
+
+        Http::fake([
+            'api.mokshiq.in/*' => Http::response([
+                'status' => 'success',
+                'message' => 'Recharge Successful',
+                'txn_id' => 'MK_TXN_001',
+                'opid' => 'MK_OP_001',
+            ], 200),
+        ]);
+
+        $this->postJson(route('api.v1.recharge'), [
+            'account_number' => '9876543210',
+            'amount' => 100,
+            'operator_sp_key' => 116,
+            'operator_type' => 'mobile',
+            'circle' => 'Bihar',
+            'client_request_id' => 'MK_OK_1',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.provider_txn_id', 'MK_TXN_001')
+            ->assertJsonPath('data.operator_ref', 'MK_OP_001');
+
+        $this->user->refresh();
+        $this->assertEquals(403.0000, (float) $this->user->wallet_balance);
+
+        $txn = RechargeTransaction::query()->where('client_request_id', 'MK_OK_1')->first();
+        $this->assertNotNull($txn);
+        $this->assertEquals('success', $txn->status);
+        $this->assertEquals(\App\Enums\RechargeProvider::Mokshiq, $txn->provider);
+        $this->assertEquals('Bihar', $txn->circle);
+
+        Http::assertSent(function ($request) {
+            return str_contains($request->url(), 'create_mobile_recharge')
+                && $request->hasHeader('Authorization', 'Bearer MK_TOKEN')
+                && $request->hasHeader('Origin', 'https://partner.example.com');
+        });
+    }
+
+    public function test_whitelabel_developer_inherits_mokshiq_provider(): void
+    {
+        $wl = \App\Models\Whitelabel::factory()->withFloat(5000)->create([
+            'recharge_provider' => \App\Enums\RechargeProvider::Mokshiq,
+        ]);
+
+        $this->user->update([
+            'whitelabel_id' => $wl->id,
+            'recharge_provider' => \App\Enums\RechargeProvider::Roundpay, // ignored for WL users
+        ]);
+
+        \App\Models\Setting::setValue('mokshiq_token', 'MK_TOKEN', 'recharge');
+        \App\Models\Setting::setValue('mokshiq_pin', '2242', 'recharge');
+        \App\Models\Setting::setValue('mokshiq_origin', 'https://partner.example.com', 'recharge');
+
+        $this->actingAs($this->user, 'sanctum');
+
+        Http::fake([
+            'api.mokshiq.in/*' => Http::response([
+                'status' => 'success',
+                'message' => 'OK',
+                'txn_id' => 'MK_WL_1',
+            ], 200),
+            'api.roundpay.net/*' => Http::response(['STATUS' => '2', 'MSG' => 'SHOULD_NOT_HIT'], 200),
+        ]);
+
+        $this->postJson(route('api.v1.recharge'), [
+            'account_number' => '9876543210',
+            'amount' => 10,
+            'operator_sp_key' => 116,
+            'operator_type' => 'mobile',
+            'circle' => 'Delhi NCR',
+            'client_request_id' => 'MK_WL_OK',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'success');
+
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'api.mokshiq.in'));
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.roundpay.net'));
+    }
+
+    public function test_roundpay_ignores_circle(): void
+    {
+        $this->actingAs($this->user, 'sanctum');
+
+        Http::fake([
+            'api.roundpay.net/*' => Http::response([
+                'STATUS' => '2',
+                'MSG' => 'SUCCESS',
+                'RPID' => 'RP_CIRCLE_IGN',
+                'OPID' => 'OP_CIRCLE_IGN',
+            ], 200),
+        ]);
+
+        $this->postJson(route('api.v1.recharge'), [
+            'account_number' => '9876543210',
+            'amount' => 10,
+            'operator_sp_key' => 116,
+            'operator_type' => 'mobile',
+            'circle' => 'Bihar',
+            'client_request_id' => 'RP_WITH_CIRCLE',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'success');
+
+        $txn = RechargeTransaction::query()->where('client_request_id', 'RP_WITH_CIRCLE')->first();
+        $this->assertEquals(\App\Enums\RechargeProvider::Roundpay, $txn->provider);
+        $this->assertEquals('Bihar', $txn->circle);
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'api.roundpay.net'));
+    }
 }

@@ -10,22 +10,43 @@
     <div class="space-y-6">
         <x-filament::section>
             <div class="flex flex-col gap-4 sm:flex-row sm:items-end justify-between">
-                <div class="flex-1 max-w-md">
-                    <label class="block text-sm font-medium text-gray-950 dark:text-white mb-2">
-                        Select user
-                    </label>
+                <div class="flex flex-1 flex-col gap-4 sm:flex-row sm:items-end">
+                    <div class="flex-1 max-w-md">
+                        <label class="block text-sm font-medium text-gray-950 dark:text-white mb-2">
+                            Select user
+                        </label>
 
-                    <x-filament::input.wrapper>
-                        <x-filament::input.select
-                            wire:model.live="selectedUserId"
-                        >
-                            @foreach ($this->developerUsersForSelect() as $user)
-                                <option value="{{ $user['id'] }}">
-                                    {{ $user['label'] }}
-                                </option>
-                            @endforeach
-                        </x-filament::input.select>
-                    </x-filament::input.wrapper>
+                        <x-filament::input.wrapper>
+                            <x-filament::input.select
+                                wire:model.live="selectedUserId"
+                            >
+                                @foreach ($this->developerUsersForSelect() as $user)
+                                    <option value="{{ $user['id'] }}">
+                                        {{ $user['label'] }}
+                                    </option>
+                                @endforeach
+                            </x-filament::input.select>
+                        </x-filament::input.wrapper>
+                    </div>
+
+                    @if ($this->selectedUserIsPlatformDeveloper())
+                        <div class="flex-1 max-w-xs">
+                            <label class="block text-sm font-medium text-gray-950 dark:text-white mb-2">
+                                Recharge provider
+                            </label>
+
+                            <x-filament::input.wrapper>
+                                <x-filament::input.select wire:model="rechargeProvider">
+                                    @foreach ($this->rechargeProviderOptions() as $value => $label)
+                                        <option value="{{ $value }}">{{ $label }}</option>
+                                    @endforeach
+                                </x-filament::input.select>
+                            </x-filament::input.wrapper>
+                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                One provider per platform developer. White-label developers inherit from their partner.
+                            </p>
+                        </div>
+                    @endif
                 </div>
 
                 <div>
