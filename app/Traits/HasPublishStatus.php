@@ -35,14 +35,4 @@ trait HasPublishStatus
             PublishStatus::Deprecated->value,
         ]);
     }
-
-    public function scopeDraft(Builder $query): Builder
-    {
-        return $query->where('status', PublishStatus::Draft->value);
-    }
-
-    public function scopePubliclyVisible(Builder $query): Builder
-    {
-        return $this->scopePublished($query);
-    }
 }

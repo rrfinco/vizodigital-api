@@ -5,15 +5,10 @@ namespace App\Services\Portal;
 use App\Models\ApiEndpoint;
 use App\Models\ApiVersion;
 use App\Models\DocumentationPage;
-use App\Repositories\Contracts\DocumentationRepositoryInterface;
 use Illuminate\Http\Request;
 
 class PortalUrlRewriter
 {
-    public function __construct(
-        private readonly DocumentationRepositoryInterface $documentation,
-    ) {}
-
     public function forVersion(Request $request, ApiVersion $version, ?string $environmentSlug = null): string
     {
         $route = $request->route()?->getName();
@@ -29,15 +24,6 @@ class PortalUrlRewriter
             'docs.explorer' => route('docs.explorer', ['version' => $version->slug] + $query),
             default => route('docs.explorer', ['version' => $version->slug] + $query),
         };
-    }
-
-    public function withEnvironment(Request $request, string $environmentSlug): string
-    {
-        $url = $request->url();
-        $query = $request->query();
-        $query['env'] = $environmentSlug;
-
-        return $url.'?'.http_build_query($query);
     }
 
     /**

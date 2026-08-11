@@ -96,16 +96,6 @@ class PortalContext
         }
     }
 
-    public function setVersion(string $slug): void
-    {
-        $version = $this->documentation->findVersionBySlug($slug);
-
-        if ($version) {
-            session([self::SESSION_VERSION => $version->slug]);
-            $this->version = $version;
-        }
-    }
-
     private function resolveVersion(Request $request): ?ApiVersion
     {
         $routeVersion = $request->route('version');

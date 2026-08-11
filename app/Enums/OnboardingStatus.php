@@ -33,9 +33,4 @@ enum OnboardingStatus: string
     {
         return $this === self::Approved;
     }
-
-    public function isAwaitingReview(): bool
-    {
-        return $this === self::KycSubmitted;
-    }
 }
