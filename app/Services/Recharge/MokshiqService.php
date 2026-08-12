@@ -87,13 +87,9 @@ class MokshiqService
                     'body' => $response->body(),
                 ]);
 
-                $providerMsg = trim((string) ($response->json('message') ?? $response->json('msg') ?? ''));
-
                 return [
                     'status' => 'failed',
-                    'msg' => $providerMsg !== ''
-                        ? $providerMsg
-                        : 'Provider Connection Failure (HTTP '.$response->status().')',
+                    'msg' => $this->httpFailureMessage($response),
                     'errorCode' => 'HTTP_'.$response->status(),
                 ];
             }
@@ -165,7 +161,7 @@ class MokshiqService
 
                 return [
                     'status' => 'failed',
-                    'msg' => 'Provider Connection Failure',
+                    'msg' => $this->httpFailureMessage($response),
                     'errorCode' => 'HTTP_'.$response->status(),
                 ];
             }
@@ -223,6 +219,20 @@ class MokshiqService
         return $parts;
     }
 
+    private function httpFailureMessage(\Illuminate\Http\Client\Response $response): string
+    {
+        $providerMsg = trim((string) (
+            $response->json('message')
+            ?? $response->json('msg')
+            ?? $response->json('detail')
+            ?? ''
+        ));
+
+        return $providerMsg !== ''
+            ? $providerMsg
+            : 'Provider Connection Failure (HTTP '.$response->status().')';
+    }
+
     /**
      * @param  array<string, mixed>  $payload
      * @return array{status: string, msg: string, bal?: float, errorCode?: string, rpid?: string, opid?: string}
@@ -238,7 +248,9 @@ class MokshiqService
         $msg = (string) ($normalized['message'] ?? $normalized['msg'] ?? $normalized['Message'] ?? '');
         $txnId = isset($normalized['txn_id'])
             ? trim((string) $normalized['txn_id'])
-            : (isset($normalized['transaction_id']) ? trim((string) $normalized['transaction_id']) : null);
+            : (isset($normalized['transaction_id'])
+                ? trim((string) $normalized['transaction_id'])
+                : (isset($normalized['reference_num']) ? trim((string) $normalized['reference_num']) : null));
         $opid = isset($normalized['opid'])
             ? trim((string) $normalized['opid'])
             : (isset($normalized['operator_ref']) ? trim((string) $normalized['operator_ref']) : null);

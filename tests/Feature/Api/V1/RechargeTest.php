@@ -542,6 +542,62 @@ class RechargeTest extends TestCase
         Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.roundpay.net'));
     }
 
+    public function test_mokshiq_maps_reference_num_and_boolean_status(): void
+    {
+        $this->user->update(['recharge_provider' => \App\Enums\RechargeProvider::Mokshiq]);
+        $this->actingAs($this->user, 'sanctum');
+
+        \App\Models\Setting::setValue('mokshiq_token', 'MK_TOKEN', 'recharge');
+        \App\Models\Setting::setValue('mokshiq_pin', '2242', 'recharge');
+        \App\Models\Setting::setValue('mokshiq_origin', 'https://api.vizodigital.com/', 'recharge');
+
+        Http::fake([
+            'api.mokshiq.in/*' => Http::response([
+                'message' => 'Recharge done successfully',
+                'status' => true,
+                'reference_num' => '2731645905',
+            ], 200),
+        ]);
+
+        $this->postJson(route('api.v1.recharge'), [
+            'account_number' => '9431023126',
+            'amount' => 10,
+            'operator_sp_key' => 116,
+            'operator_type' => 'mobile',
+            'circle' => 'Bihar Jharkhand',
+            'client_request_id' => 'MK_REF_NUM',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.provider_txn_id', '2731645905');
+    }
+
+    public function test_mokshiq_surfaces_invalid_token_detail(): void
+    {
+        $this->user->update(['recharge_provider' => \App\Enums\RechargeProvider::Mokshiq]);
+        $this->actingAs($this->user, 'sanctum');
+
+        \App\Models\Setting::setValue('mokshiq_token', 'BAD_TOKEN', 'recharge');
+        \App\Models\Setting::setValue('mokshiq_pin', '2242', 'recharge');
+        \App\Models\Setting::setValue('mokshiq_origin', 'https://api.vizodigital.com/', 'recharge');
+
+        Http::fake([
+            'api.mokshiq.in/*' => Http::response(['detail' => 'Invalid token'], 403),
+        ]);
+
+        $this->postJson(route('api.v1.recharge'), [
+            'account_number' => '9431023126',
+            'amount' => 10,
+            'operator_sp_key' => 116,
+            'operator_type' => 'mobile',
+            'circle' => 'Bihar Jharkhand',
+            'client_request_id' => 'MK_BAD_TOKEN',
+        ])
+            ->assertStatus(400)
+            ->assertJsonPath('status', 'failed')
+            ->assertJsonPath('message', 'Invalid token');
+    }
+
     public function test_roundpay_ignores_circle(): void
     {
         $this->actingAs($this->user, 'sanctum');
