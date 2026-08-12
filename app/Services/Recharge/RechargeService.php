@@ -200,7 +200,8 @@ class RechargeService
                     'operator' => (string) $mokshiqOperator,
                     'number' => $accountNumber,
                     'amount' => $amount,
-                    'circle' => (string) $circle,
+                    // Operator-fetch returns "Bihar and Jharkhand"; Mokshiq expects "Bihar Jharkhand".
+                    'circle' => MokshiqCircleMap::normalize((string) $circle),
                 ]);
             } else {
                 $providerResult = $this->mokshiqService->createDthRecharge([

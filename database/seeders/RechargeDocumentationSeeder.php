@@ -142,7 +142,7 @@ Submit a **{$label}** request against your developer wallet.
 - Amount is deducted from wallet before the provider call; failed attempts are refunded.
 - Use a unique `client_request_id` to avoid duplicate processing.
 - Admin assigns one recharge provider per platform developer (or per white-label for WL developers): **Roundpay** or **Mokshiq**.
-- For **Mokshiq** mobile recharges, first call operator/plan fetch, then pass `circle` (circle name string from the fetch response).
+- For **Mokshiq** mobile recharges, first call operator/plan fetch, then pass `circle` (circle name from the fetch response is fine — the portal normalizes names like `Bihar and Jharkhand` → `Bihar Jharkhand` for Mokshiq).
 - For Mokshiq **DTH** recharges, `circle` is not required.
 MD,
                 'status' => PublishStatus::Published,

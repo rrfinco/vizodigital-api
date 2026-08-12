@@ -425,7 +425,7 @@ class RechargeTest extends TestCase
             'amount' => 100,
             'operator_sp_key' => 116,
             'operator_type' => 'mobile',
-            'circle' => 'Bihar',
+            'circle' => 'Bihar and Jharkhand',
             'client_request_id' => 'MK_OK_1',
         ])
             ->assertOk()
@@ -440,12 +440,64 @@ class RechargeTest extends TestCase
         $this->assertNotNull($txn);
         $this->assertEquals('success', $txn->status);
         $this->assertEquals(\App\Enums\RechargeProvider::Mokshiq, $txn->provider);
-        $this->assertEquals('Bihar', $txn->circle);
+        $this->assertEquals('Bihar and Jharkhand', $txn->circle);
 
         Http::assertSent(function ($request) {
+            $body = $request->body();
+
             return str_contains($request->url(), 'create_mobile_recharge')
                 && $request->hasHeader('Authorization', 'Bearer MK_TOKEN')
-                && $request->hasHeader('Origin', 'https://partner.example.com');
+                && $request->hasHeader('Origin', 'https://partner.example.com')
+                && str_contains($body, 'name="circle"')
+                && str_contains($body, 'Bihar Jharkhand')
+                && ! str_contains($body, 'Bihar and Jharkhand');
+        });
+    }
+
+    public function test_mokshiq_normalizes_operator_fetch_circle_name(): void
+    {
+        $this->user->update(['recharge_provider' => \App\Enums\RechargeProvider::Mokshiq]);
+        $this->actingAs($this->user, 'sanctum');
+
+        \App\Models\Setting::setValue('mokshiq_token', 'MK_TOKEN', 'recharge');
+        \App\Models\Setting::setValue('mokshiq_pin', '2242', 'recharge');
+        \App\Models\Setting::setValue('mokshiq_origin', 'https://api.vizodigital.com/', 'recharge');
+
+        Http::fake([
+            'api.mokshiq.in/*' => Http::response([
+                'status' => 'success',
+                'message' => 'Recharge Successful',
+                'txn_id' => 'MK_TXN_CIRCLE',
+                'opid' => 'MK_OP_CIRCLE',
+            ], 200),
+        ]);
+
+        $this->postJson(route('api.v1.recharge'), [
+            'account_number' => '6205705816',
+            'amount' => 10,
+            'operator_sp_key' => 3,
+            'operator_type' => 'mobile',
+            'circle' => 'Bihar and Jharkhand',
+            'client_request_id' => 'MK_CIRCLE_NORM',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'success');
+
+        $txn = RechargeTransaction::query()->where('client_request_id', 'MK_CIRCLE_NORM')->first();
+        $this->assertNotNull($txn);
+        // Persist what the client sent; only the outbound Mokshiq payload is normalized.
+        $this->assertEquals('Bihar and Jharkhand', $txn->circle);
+
+        Http::assertSent(function ($request) {
+            $body = $request->body();
+
+            return str_contains($request->url(), 'create_mobile_recharge')
+                && $request->hasHeader('Origin', 'https://api.vizodigital.com')
+                && str_contains($body, 'name="operator"')
+                && str_contains($body, 'Airtel')
+                && str_contains($body, 'name="circle"')
+                && str_contains($body, 'Bihar Jharkhand')
+                && ! str_contains($body, 'Bihar and Jharkhand');
         });
     }
 

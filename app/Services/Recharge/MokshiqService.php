@@ -87,9 +87,13 @@ class MokshiqService
                     'body' => $response->body(),
                 ]);
 
+                $providerMsg = trim((string) ($response->json('message') ?? $response->json('msg') ?? ''));
+
                 return [
                     'status' => 'failed',
-                    'msg' => 'Provider Connection Failure',
+                    'msg' => $providerMsg !== ''
+                        ? $providerMsg
+                        : 'Provider Connection Failure (HTTP '.$response->status().')',
                     'errorCode' => 'HTTP_'.$response->status(),
                 ];
             }
@@ -196,7 +200,8 @@ class MokshiqService
     {
         return [
             'Authorization' => 'Bearer '.$this->settings->mokshiqToken(),
-            'Origin' => $this->settings->mokshiqOrigin(),
+            // Origin is compared as a registered client URL; trailing slash often breaks match.
+            'Origin' => rtrim($this->settings->mokshiqOrigin(), '/'),
             'Accept' => 'application/json',
         ];
     }
