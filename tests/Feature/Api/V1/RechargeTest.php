@@ -492,7 +492,7 @@ class RechargeTest extends TestCase
             $body = $request->body();
 
             return str_contains($request->url(), 'create_mobile_recharge')
-                && $request->hasHeader('Origin', 'https://api.vizodigital.com')
+                && $request->hasHeader('Origin', 'https://api.vizodigital.com/')
                 && str_contains($body, 'name="operator"')
                 && str_contains($body, 'Airtel')
                 && str_contains($body, 'name="circle"')

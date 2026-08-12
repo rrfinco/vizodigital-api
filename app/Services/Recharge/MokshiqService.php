@@ -200,8 +200,8 @@ class MokshiqService
     {
         return [
             'Authorization' => 'Bearer '.$this->settings->mokshiqToken(),
-            // Origin is compared as a registered client URL; trailing slash often breaks match.
-            'Origin' => rtrim($this->settings->mokshiqOrigin(), '/'),
+            // Send exactly as registered in Mokshiq (Postman uses e.g. https://api.vizodigital.com/).
+            'Origin' => trim($this->settings->mokshiqOrigin()),
             'Accept' => 'application/json',
         ];
     }
