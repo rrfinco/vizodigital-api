@@ -121,6 +121,26 @@ class RechargeDocumentationSeeder extends Seeder
         $operatorType = $config['operator_type'];
         $accountNumber = $config['account_number'];
         $label = $config['name'];
+        $isMobile = $operatorType === 'mobile';
+        $requestExample = $isMobile
+            ? [
+                'account_number' => '9431023126',
+                'amount' => 10,
+                'operator_sp_key' => 116,
+                'operator_type' => 'mobile',
+                'circle' => 'Bihar and Jharkhand',
+                'client_request_id' => '#Vizo28',
+            ]
+            : [
+                'account_number' => $accountNumber,
+                'amount' => 10,
+                'operator_sp_key' => 51,
+                'operator_type' => 'dth',
+                'client_request_id' => 'UNIQUE_ID_123',
+            ];
+        $providerNotes = $isMobile
+            ? "- If your account is assigned **Roundpay**, the existing recharge payload keeps working and `circle` stays optional.\n- If your account is assigned **Mokshiq**, pass `operator_sp_key` and `circle` from operator/plan fetch. Example: `operator_sp_key: 116` (`Jio`) with `circle: \"Bihar and Jharkhand\"`.\n- UAT and Production use the same request / response contract; only the base URL and credentials change."
+            : "- UAT and Production use the same request / response contract for DTH recharge; only the base URL and credentials change.\n- `circle` is not required for DTH on either Roundpay or Mokshiq.";
 
         $endpoint = ApiEndpoint::updateOrCreate(
             [
@@ -144,6 +164,7 @@ Submit a **{$label}** request against your developer wallet.
 - Admin assigns one recharge provider per platform developer (or per white-label for WL developers): **Roundpay** or **Mokshiq**.
 - For **Mokshiq** mobile recharges, first call operator/plan fetch, then pass `circle` (circle name from the fetch response is fine — the portal normalizes names like `Bihar and Jharkhand` → `Bihar Jharkhand` for Mokshiq).
 - For Mokshiq **DTH** recharges, `circle` is not required.
+{$providerNotes}
 MD,
                 'status' => PublishStatus::Published,
                 'rate_limit' => '60/min',
@@ -159,24 +180,17 @@ MD,
             [
                 'description' => "{$label} request body",
                 'required' => true,
-                'example' => array_filter([
-                    'account_number' => $accountNumber,
-                    'amount' => 10,
-                    'operator_sp_key' => 1,
-                    'operator_type' => $operatorType,
-                    'client_request_id' => 'UNIQUE_ID_123',
-                    'circle' => $operatorType === 'mobile' ? 'Bihar' : null,
-                ], fn ($v) => $v !== null),
+                'example' => $requestExample,
                 'schema' => [
                     'type' => 'object',
                     'required' => ['account_number', 'amount', 'operator_sp_key', 'operator_type'],
                     'properties' => [
                         'account_number' => ['type' => 'string', 'description' => $operatorType === 'mobile' ? '10-digit mobile number' : 'DTH subscriber / account number'],
                         'amount' => ['type' => 'number', 'description' => 'Recharge amount in INR'],
-                        'operator_sp_key' => ['type' => 'integer', 'description' => 'Operator code / SP key'],
+                        'operator_sp_key' => ['type' => 'integer', 'description' => $isMobile ? 'Operator code / SP key. Example: `116` for Jio or `3` for Airtel.' : 'Operator code / SP key. Example: `51` for Airtel Digital TV.'],
                         'operator_type' => ['type' => 'string', 'enum' => [$operatorType]],
                         'client_request_id' => ['type' => 'string', 'description' => 'Unique client order ID'],
-                        'circle' => ['type' => 'string', 'description' => 'Circle name from operator/plan fetch. Required when your account uses the Mokshiq provider (mobile only).'],
+                        'circle' => ['type' => 'string', 'description' => $isMobile ? 'Circle name from operator/plan fetch. Required only when your account uses Mokshiq mobile recharge. Example: `Bihar and Jharkhand`.' : 'Not used for DTH recharge.'],
                         'geocode' => ['type' => 'string'],
                         'customer_number' => ['type' => 'string'],
                         'pincode' => ['type' => 'string'],
@@ -237,20 +251,14 @@ MD,
                     'title' => 'Success Response',
                 ],
                 [
-                    'request' => [
-                        'account_number' => $accountNumber,
-                        'amount' => 10,
-                        'operator_sp_key' => 1,
-                        'operator_type' => $operatorType,
-                        'client_request_id' => 'UNIQUE_ID_123',
-                    ],
+                    'request' => $requestExample,
                     'response' => [
                         'status' => 'success',
                         'message' => 'Recharge completed successfully.',
                         'data' => [
                             'api_request_id' => 'RC_20260730123000_AB12',
-                            'client_request_id' => 'UNIQUE_ID_123',
-                            'account_number' => $accountNumber,
+                            'client_request_id' => (string) $requestExample['client_request_id'],
+                            'account_number' => (string) $requestExample['account_number'],
                             'amount' => 10,
                             'operator_ref' => 'OP998877',
                             'provider_txn_id' => 'RP123456789',
@@ -270,13 +278,7 @@ MD,
                     'title' => 'Failure Response',
                 ],
                 [
-                    'request' => [
-                        'account_number' => $accountNumber,
-                        'amount' => 10,
-                        'operator_sp_key' => 1,
-                        'operator_type' => $operatorType,
-                        'client_request_id' => 'UNIQUE_ID_123',
-                    ],
+                    'request' => $requestExample,
                     'response' => [
                         'status' => 'failed',
                         'message' => 'Insufficient wallet balance. Please recharge your wallet.',
@@ -288,19 +290,19 @@ MD,
             );
 
             $baseUrl = rtrim((string) $env->base_url, '/');
-            $circleLine = $operatorType === 'mobile'
-                ? "    \"circle\": \"Bihar\",\n"
+            $circleLine = $isMobile
+                ? "    \"circle\": \"Bihar and Jharkhand\",\n"
                 : '';
             $curl = <<<BASH
 curl -X POST "{$baseUrl}/api/v1/recharge" \\
   -H "Authorization: Bearer YOUR_API_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "account_number": "{$accountNumber}",
+    "account_number": "{$requestExample['account_number']}",
     "amount": 10,
-    "operator_sp_key": 1,
+    "operator_sp_key": {$requestExample['operator_sp_key']},
     "operator_type": "{$operatorType}",
-{$circleLine}    "client_request_id": "UNIQUE_ID_123"
+{$circleLine}    "client_request_id": "{$requestExample['client_request_id']}"
   }'
 BASH;
 
