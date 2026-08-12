@@ -81,6 +81,12 @@ class FilamentLoginTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_user_panel_password_reset_request_page_is_available(): void
+    {
+        $this->get('/user/password-reset/request')
+            ->assertOk();
+    }
+
     public function test_invalid_password_fails_on_admin_panel(): void
     {
         Filament::setCurrentPanel(Filament::getPanel('admin'));

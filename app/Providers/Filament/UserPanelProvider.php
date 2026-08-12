@@ -34,6 +34,7 @@ class UserPanelProvider extends PanelProvider
             ->id('user')
             ->path('user')
             ->login()
+            ->passwordReset()
             ->brandName(fn (): string => app(\App\Services\Portal\PortalSettings::class)->whitelabelBrandName() ?: 'USER portal')
             ->brandLogo(fn (): HtmlString => new HtmlString(
                 view('filament.hooks.brand-mark', [

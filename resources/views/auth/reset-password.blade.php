@@ -1,6 +1,6 @@
 @extends('layouts.base')
 
-@section('title', 'Sign in — ' . config('portal.name'))
+@section('title', 'Reset password — ' . config('portal.name'))
 
 @section('body')
     <div class="flex min-h-screen flex-col justify-center bg-portal-bg px-4 py-12 dark:bg-slate-950">
@@ -13,25 +13,23 @@
                         class="h-10 w-auto object-contain"
                     />
                 </a>
-                <h1 class="mt-6 text-2xl font-semibold tracking-tight text-portal-dark dark:text-white">Sign in</h1>
-                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">Access your developer portal account</p>
+                <h1 class="mt-6 text-2xl font-semibold tracking-tight text-portal-dark dark:text-white">Reset password</h1>
+                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                    Choose a new password for your account.
+                </p>
             </div>
 
             <div class="portal-card p-6 dark:border-slate-800 sm:p-8">
-                @if (session('status'))
-                    <div class="mb-4 rounded-2xl border border-emerald-300/40 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-300">
-                        {{ session('status') }}
-                    </div>
-                @endif
-
                 @if ($errors->any())
                     <div class="mb-4 rounded-2xl border border-portal-danger/30 bg-red-50 px-4 py-3 text-sm text-portal-danger dark:border-red-900/40 dark:bg-red-950/40">
                         {{ $errors->first() }}
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('login.store') }}" class="space-y-4">
+                <form method="POST" action="{{ route('password.update') }}" class="space-y-4">
                     @csrf
+
+                    <input type="hidden" name="token" value="{{ $token }}">
 
                     <div>
                         <label for="email" class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Email</label>
@@ -39,7 +37,7 @@
                             id="email"
                             type="email"
                             name="email"
-                            value="{{ old('email') }}"
+                            value="{{ old('email', $email) }}"
                             required
                             autofocus
                             autocomplete="username"
@@ -49,38 +47,36 @@
                     </div>
 
                     <div>
-                        <div class="mb-1.5 flex items-center justify-between">
-                            <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300">Password</label>
-                            <a href="{{ route('password.request') }}" class="text-sm font-medium text-primary-600 hover:text-primary-700">
-                                Forgot password?
-                            </a>
-                        </div>
+                        <label for="password" class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">New password</label>
                         <input
                             id="password"
                             type="password"
                             name="password"
                             required
-                            autocomplete="current-password"
+                            autocomplete="new-password"
                             class="portal-input"
                             placeholder="••••••••"
                         >
                     </div>
 
-                    <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                        <input type="checkbox" name="remember" value="1" class="rounded border-portal-border text-primary-600 focus:ring-primary-500">
-                        Remember me
-                    </label>
+                    <div>
+                        <label for="password_confirmation" class="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300">Confirm password</label>
+                        <input
+                            id="password_confirmation"
+                            type="password"
+                            name="password_confirmation"
+                            required
+                            autocomplete="new-password"
+                            class="portal-input"
+                            placeholder="••••••••"
+                        >
+                    </div>
 
                     <button type="submit" class="portal-btn-primary w-full">
-                        Sign in
+                        Reset password
                     </button>
                 </form>
             </div>
-
-            <p class="mt-6 text-center text-sm text-slate-500">
-                New developer?
-                <a href="{{ route('register') }}" class="font-medium text-primary-600 hover:text-primary-700">Create an account</a>
-            </p>
         </div>
     </div>
 @endsection

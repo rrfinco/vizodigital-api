@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Web\Auth\LoginController;
+use App\Http\Controllers\Web\Auth\NewPasswordController;
+use App\Http\Controllers\Web\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Web\Auth\ProfileController;
 use App\Http\Controllers\Web\Auth\RegisterController;
 use App\Http\Controllers\Web\Docs\OverviewController;
@@ -29,6 +31,11 @@ Route::middleware('guest')->group(function (): void {
     Route::get('/register', [RegisterController::class, 'create'])->name('register');
     Route::post('/register', [RegisterController::class, 'store'])->name('register.store');
     Route::get('/register/thanks', [RegisterController::class, 'thanks'])->name('register.thanks');
+
+    Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])->name('password.request');
+    Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])->name('password.email');
+    Route::get('/reset-password/{token}', [NewPasswordController::class, 'create'])->name('password.reset');
+    Route::post('/reset-password', [NewPasswordController::class, 'store'])->name('password.update');
 });
 
 Route::get('/onboarding/kyc/submitted', [KycController::class, 'submitted'])->name('onboarding.kyc.submitted');
