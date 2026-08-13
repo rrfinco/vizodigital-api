@@ -40,14 +40,9 @@ class SidebarBuilder
             ));
         }
 
-        $endpoints = $this->endpointNodes($version);
-        if ($endpoints->isNotEmpty()) {
-            $nodes->push(new NavigationNodeDto(
-                label: 'Endpoints',
-                href: null,
-                active: $endpoints->contains(fn (NavigationNodeDto $n) => $n->active),
-                children: $endpoints,
-            ));
+        $endpointSections = $this->endpointNodes($version);
+        foreach ($endpointSections as $section) {
+            $nodes->push($section);
         }
 
         $reference = $this->referenceNodes($version);
@@ -106,7 +101,7 @@ class SidebarBuilder
     }
 
     /**
-     * Flatten published endpoints under ENDPOINTS (InsPay-style).
+     * One sidebar section per published category (same headers as the API Explorer).
      *
      * @return Collection<int, NavigationNodeDto>
      */
@@ -119,11 +114,17 @@ class SidebarBuilder
         $categories = $this->documentation->publishedCategoryTree($version->slug);
 
         return $categories
-            ->flatMap(fn (ApiCategory $category) => $category->groups
-                ->flatMap(fn (ApiGroup $group) => $group->endpoints)
-                ->sortBy('sort_order')
-                ->values()
-                ->map(function (ApiEndpoint $endpoint) use ($version): NavigationNodeDto {
+            ->map(function (ApiCategory $category) use ($version): ?NavigationNodeDto {
+                $endpoints = $category->groups
+                    ->flatMap(fn (ApiGroup $group) => $group->endpoints)
+                    ->sortBy('sort_order')
+                    ->values();
+
+                if ($endpoints->isEmpty()) {
+                    return null;
+                }
+
+                $children = $endpoints->map(function (ApiEndpoint $endpoint) use ($version): NavigationNodeDto {
                     $href = route('docs.endpoints.show', [
                         'version' => $version->slug,
                         'endpoint' => $endpoint->slug,
@@ -135,7 +136,16 @@ class SidebarBuilder
                         active: $this->isActive($href),
                         badge: $endpoint->method?->value,
                     );
-                }))
+                });
+
+                return new NavigationNodeDto(
+                    label: $category->name,
+                    href: null,
+                    active: $children->contains(fn (NavigationNodeDto $node) => $node->active),
+                    children: $children,
+                );
+            })
+            ->filter()
             ->values();
     }
 

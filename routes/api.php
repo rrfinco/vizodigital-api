@@ -43,5 +43,20 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
         Route::post('/plan/dth-info', [\App\Http\Controllers\Api\V1\PlanApiController::class, 'dthInfo'])
             ->name('plan.dth-info');
+
+        Route::get('/products/categories', [\App\Http\Controllers\Api\V1\ProductApiController::class, 'categories'])
+            ->name('products.categories');
+
+        Route::get('/products', [\App\Http\Controllers\Api\V1\ProductApiController::class, 'index'])
+            ->name('products.index');
+
+        Route::post('/products/details', [\App\Http\Controllers\Api\V1\ProductApiController::class, 'details'])
+            ->name('products.details');
+
+        Route::post('/leads', [\App\Http\Controllers\Api\V1\LeadApiController::class, 'store'])
+            ->name('leads.store');
+
+        Route::get('/leads/status', [\App\Http\Controllers\Api\V1\LeadApiController::class, 'status'])
+            ->name('leads.status');
     });
 });

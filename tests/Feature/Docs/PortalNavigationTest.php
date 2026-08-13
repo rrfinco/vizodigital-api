@@ -126,6 +126,14 @@ class PortalNavigationTest extends TestCase
             ->assertDontSee('Sidebar will load from CMS navigation');
     }
 
+    public function test_docs_sidebar_groups_endpoints_under_category_headers(): void
+    {
+        $this->get(route('docs.overview'))
+            ->assertOk()
+            ->assertSee('Core')
+            ->assertSee('Get Token');
+    }
+
     public function test_docs_sidebar_keeps_reference_links_out_of_getting_started(): void
     {
         NavigationItem::query()->updateOrCreate(

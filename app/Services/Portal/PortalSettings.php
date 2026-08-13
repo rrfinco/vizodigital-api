@@ -240,6 +240,26 @@ class PortalSettings
         return 'https://api.mokshiq.in';
     }
 
+    public function banksathiBaseUrl(): string
+    {
+        return (string) $this->get('banksathi_base_url', '');
+    }
+
+    public function banksathiIv(): string
+    {
+        return (string) $this->get('banksathi_iv', '');
+    }
+
+    public function banksathiApiKey(): string
+    {
+        return (string) $this->get('banksathi_api_key', '');
+    }
+
+    public function banksathiCustomerId(): string
+    {
+        return (string) $this->get('banksathi_customer_id', '');
+    }
+
     public function walletOnlineEnabled(): bool
     {
         return (bool) $this->get('wallet_online_enabled', true);

@@ -69,6 +69,10 @@ class ManageSettings extends Page
             'mokshiq_token' => $settings->mokshiqToken(),
             'mokshiq_pin' => $settings->mokshiqPin(),
             'mokshiq_origin' => $settings->mokshiqOrigin(),
+            'banksathi_base_url' => $settings->banksathiBaseUrl(),
+            'banksathi_iv' => $settings->banksathiIv(),
+            'banksathi_api_key' => $settings->banksathiApiKey(),
+            'banksathi_customer_id' => $settings->banksathiCustomerId(),
             'wallet_online_enabled' => $settings->walletOnlineEnabled(),
             'wallet_bank_transfer_enabled' => $settings->walletBankTransferEnabled(),
             'bank_account_name' => $settings->bankAccountName(),
@@ -217,6 +221,30 @@ class ManageSettings extends Page
                             ->helperText('Origin header — your registered client origin'),
                     ]),
 
+                Section::make('BankSathi API Configuration')
+                    ->description('Credentials for the BankSathi API integration.')
+                    ->columns(2)
+                    ->schema([
+                        TextInput::make('banksathi_base_url')
+                            ->label('Base URL')
+                            ->url()
+                            ->maxLength(255)
+                            ->columnSpanFull(),
+                        TextInput::make('banksathi_iv')
+                            ->label('IV')
+                            ->maxLength(255)
+                            ->autocomplete(false),
+                        TextInput::make('banksathi_api_key')
+                            ->label('X-API-Key')
+                            ->maxLength(8192)
+                            ->autocomplete(false),
+                        TextInput::make('banksathi_customer_id')
+                            ->label('Customer ID')
+                            ->maxLength(255)
+                            ->autocomplete(false)
+                            ->helperText('Applied server-side on product details calls'),
+                    ]),
+
                 Section::make('Wallet funding methods')
                     ->description('Control which add-funds options developers see, and the bank account details for manual transfers.')
                     ->columns(2)
@@ -281,6 +309,11 @@ class ManageSettings extends Page
         $settings->set('mokshiq_token', $state['mokshiq_token'] ?? '', 'recharge');
         $settings->set('mokshiq_pin', $state['mokshiq_pin'] ?? '', 'recharge');
         $settings->set('mokshiq_origin', $state['mokshiq_origin'] ?? '', 'recharge');
+
+        $settings->set('banksathi_base_url', $state['banksathi_base_url'] ?? '', 'banksathi');
+        $settings->set('banksathi_iv', $state['banksathi_iv'] ?? '', 'banksathi');
+        $settings->set('banksathi_api_key', $state['banksathi_api_key'] ?? '', 'banksathi');
+        $settings->set('banksathi_customer_id', $state['banksathi_customer_id'] ?? '', 'banksathi');
 
         $settings->set('wallet_online_enabled', (bool) ($state['wallet_online_enabled'] ?? false), 'payment');
         $settings->set('wallet_bank_transfer_enabled', (bool) ($state['wallet_bank_transfer_enabled'] ?? false), 'payment');

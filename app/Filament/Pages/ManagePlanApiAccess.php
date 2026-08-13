@@ -65,6 +65,12 @@ class ManagePlanApiAccess extends Page
             'description' => 'Fetch credit card bill details (due amount, fetch_id) before payment.',
             'default_fee' => '0.10',
         ],
+        [
+            'key' => 'lead_generation',
+            'label' => 'Lead generation',
+            'description' => 'Catalog + details included. Per-lead fee is charged only when a lead is created.',
+            'default_fee' => '0.10',
+        ],
     ];
 
     public static function canAccess(): bool

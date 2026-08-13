@@ -18,6 +18,8 @@ class DatabaseSeeder extends Seeder
             WalletDocumentationSeeder::class,
             BillPaymentDocumentationSeeder::class,
             PlanApiDocumentationSeeder::class,
+            ProductApiDocumentationSeeder::class,
+            LeadApiDocumentationSeeder::class,
         ]);
     }
 }

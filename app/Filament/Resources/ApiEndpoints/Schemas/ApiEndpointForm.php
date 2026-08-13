@@ -86,6 +86,7 @@ class ApiEndpointForm
                                 'dth_plan_fetch' => 'DTH plan fetch (dth_plan_fetch)',
                                 'dth_info' => 'DTH customer info (dth_info)',
                                 'credit_card_fetch' => 'Credit card bill fetch (credit_card_fetch)',
+                                'lead_generation' => 'Lead generation (lead_generation)',
                             ])
                             ->searchable()
                             ->nullable(),
