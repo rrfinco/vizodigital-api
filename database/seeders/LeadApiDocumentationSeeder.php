@@ -17,6 +17,7 @@ use App\Models\EndpointRequestBody;
 use App\Models\EndpointResponse;
 use App\Services\ProductApi\ProductApiService;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
 
 class LeadApiDocumentationSeeder extends Seeder
 {
@@ -50,7 +51,7 @@ class LeadApiDocumentationSeeder extends Seeder
             ],
             [
                 'name' => 'Lead generation',
-                'description' => 'Catalog, apply URL, create lead, and status — billed per lead.',
+                'description' => 'Catalog, apply URL, create lead, and status — billed when a lead is approved.',
                 'status' => PublishStatus::Published,
                 'sort_order' => 1,
             ]
@@ -71,7 +72,7 @@ class LeadApiDocumentationSeeder extends Seeder
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, ApiEnvironment>  $environments
+     * @param  Collection<int, ApiEnvironment>  $environments
      */
     private function seedCreateLead(ApiVersion $version, ApiGroup $group, $environments): void
     {
@@ -108,12 +109,12 @@ Creates a lead for a product from **Products by Category**. Returns a `lead_code
 
 **UAT vs Production**
 - **UAT** tokens return a **sample** response. No provider call, **fee = 0**.
-- **Production** tokens create a live lead. The **per-lead fee** is deducted from your wallet.
+- **Production** tokens create a live lead. **Create Lead is not billed** (`fee = 0`).
 
 **Access & billing (Production)**
 - Admin must enable **Lead generation** (`lead_generation`) and set the per-lead fee.
-- Categories, products, details, and status are included (`fee = 0`).
-- This endpoint is the only billed call. On provider failure, the fee is refunded automatically.
+- Categories, products, details, and create lead are included (`fee = 0`).
+- The per-lead fee is charged on **Lead Status** the first time the status becomes `approved`.
 - Provider credentials (including customer id) are applied server-side.
 
 `product_id` is required. `category_id` and `required_amount` are optional (`required_amount` is used for loans).
@@ -153,7 +154,7 @@ MD,
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, ApiEnvironment>  $environments
+     * @param  Collection<int, ApiEnvironment>  $environments
      */
     private function seedLeadStatus(ApiVersion $version, ApiGroup $group, $environments): void
     {
@@ -164,8 +165,8 @@ MD,
                 'lead_code' => 'BS-LEAD-987654',
                 'lead_status' => 'approved',
             ],
-            'fee' => 0,
-            'wallet_balance' => 1000.00,
+            'fee' => 0.10,
+            'wallet_balance' => 999.90,
         ];
 
         $endpoint = ApiEndpoint::updateOrCreate(
@@ -191,8 +192,10 @@ Returns the current status for a `lead_code` from **Create Lead**.
 - `rejected`
 
 **Access & billing**
-- Admin must enable **Lead generation** (`lead_generation`) for your account.
-- This call is included — **fee = 0**. The per-lead fee is charged only on **Create Lead**.
+- Admin must enable **Lead generation** (`lead_generation`) and set the per-lead fee.
+- `pending`, `submitted`, `failed`, and `rejected` are not billed (`fee = 0`).
+- When `lead_status` is **new** compared with the last stored value **and** is `approved`, the per-lead fee is charged once.
+- Hitting this API again while the status is still `approved` does **not** charge again.
 
 Authenticate with a Bearer token.
 MD,
@@ -229,7 +232,7 @@ MD,
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, ApiEnvironment>  $environments
+     * @param  Collection<int, ApiEnvironment>  $environments
      * @param  array<string, mixed>  $exampleRequest
      * @param  array<string, mixed>  $exampleResponse
      */

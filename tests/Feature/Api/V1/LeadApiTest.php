@@ -8,6 +8,9 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Models\UserPlanApiAccess;
 use App\Models\WalletTransaction;
+use App\Models\Whitelabel;
+use App\Models\WhitelabelPlanApiAccess;
+use App\Models\WhitelabelWalletTransaction;
 use App\Services\ProductApi\ProductApiService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -105,8 +108,11 @@ class LeadApiTest extends TestCase
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('data.lead_code', 'BS-LEAD-987654')
             ->assertJsonPath('data.campaign_url', 'https://apply.example.test/campaign/xyz789')
-            ->assertJsonPath('fee', 0.10)
-            ->assertJsonPath('wallet_balance', 99.90);
+            ->assertJsonPath('fee', 0)
+            ->assertJsonPath('wallet_balance', 100);
+
+        $this->assertSame(100.0, (float) $this->user->fresh()->wallet_balance);
+        $this->assertSame(0, WalletTransaction::query()->count());
 
         Http::assertSent(function ($request): bool {
             return $request->url() === 'https://tryleadapi.example.test/api/b2b/lead'
@@ -154,6 +160,38 @@ class LeadApiTest extends TestCase
             ->assertJsonPath('status', 'error');
     }
 
+    public function test_lead_status_pending_does_not_charge(): void
+    {
+        $this->enableService(ProductApiService::SERVICE_LEAD_GENERATION, 0.10);
+        $this->actingAs($this->user, 'sanctum');
+
+        Http::fake([
+            'tryleadapi.example.test/*' => Http::response([
+                'status' => true,
+                'data' => [
+                    'lead_code' => 'BS-LEAD-987654',
+                    'lead_status' => 'pending',
+                ],
+            ], 200),
+        ]);
+
+        $this->getJson(route('api.v1.leads.status', ['lead_code' => 'BS-LEAD-987654']))
+            ->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('data.lead_code', 'BS-LEAD-987654')
+            ->assertJsonPath('data.lead_status', 'pending')
+            ->assertJsonPath('fee', 0)
+            ->assertJsonPath('wallet_balance', 100);
+
+        $this->assertSame(100.0, (float) $this->user->fresh()->wallet_balance);
+        $this->assertSame(0, WalletTransaction::query()->count());
+        $this->assertDatabaseHas('lead_status_snapshots', [
+            'user_id' => $this->user->id,
+            'lead_code' => 'BS-LEAD-987654',
+            'last_status' => 'pending',
+        ]);
+    }
+
     public function test_lead_status_success(): void
     {
         $this->enableService(ProductApiService::SERVICE_LEAD_GENERATION, 0.10);
@@ -164,7 +202,7 @@ class LeadApiTest extends TestCase
                 'status' => true,
                 'data' => [
                     'lead_code' => 'BS-LEAD-987654',
-                    'lead_status' => 'approved',
+                    'lead_status' => 'submitted',
                 ],
             ], 200),
         ]);
@@ -173,8 +211,10 @@ class LeadApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('status', 'success')
             ->assertJsonPath('data.lead_code', 'BS-LEAD-987654')
-            ->assertJsonPath('data.lead_status', 'approved')
+            ->assertJsonPath('data.lead_status', 'submitted')
             ->assertJsonPath('fee', 0);
+
+        $this->assertSame(0, WalletTransaction::query()->count());
 
         Http::assertSent(function ($request): bool {
             return str_starts_with($request->url(), 'https://tryleadapi.example.test/api/b2b/leadStatus')
@@ -197,18 +237,112 @@ class LeadApiTest extends TestCase
             ->assertJsonPath('fee', 0);
 
         Http::assertNothingSent();
+        $this->assertSame(0, WalletTransaction::query()->count());
     }
 
-    public function test_whitelabel_create_lead_debits_per_lead_fee_and_credits_margin(): void
+    public function test_lead_status_charges_once_when_status_first_becomes_approved(): void
     {
-        $whitelabel = \App\Models\Whitelabel::factory()->withFloat(100)->create();
+        $this->enableService(ProductApiService::SERVICE_LEAD_GENERATION, 0.10);
+        $this->actingAs($this->user, 'sanctum');
+
+        Http::fake([
+            'tryleadapi.example.test/*' => Http::sequence()
+                ->push([
+                    'status' => true,
+                    'data' => [
+                        'lead_code' => 'BS-LEAD-987654',
+                        'lead_status' => 'pending',
+                    ],
+                ], 200)
+                ->push([
+                    'status' => true,
+                    'data' => [
+                        'lead_code' => 'BS-LEAD-987654',
+                        'lead_status' => 'approved',
+                    ],
+                ], 200)
+                ->push([
+                    'status' => true,
+                    'data' => [
+                        'lead_code' => 'BS-LEAD-987654',
+                        'lead_status' => 'approved',
+                    ],
+                ], 200),
+        ]);
+
+        $this->getJson(route('api.v1.leads.status', ['lead_code' => 'BS-LEAD-987654']))
+            ->assertOk()
+            ->assertJsonPath('data.lead_status', 'pending')
+            ->assertJsonPath('fee', 0);
+
+        $this->getJson(route('api.v1.leads.status', ['lead_code' => 'BS-LEAD-987654']))
+            ->assertOk()
+            ->assertJsonPath('data.lead_status', 'approved')
+            ->assertJsonPath('fee', 0.10)
+            ->assertJsonPath('wallet_balance', 99.90);
+
+        $this->getJson(route('api.v1.leads.status', ['lead_code' => 'BS-LEAD-987654']))
+            ->assertOk()
+            ->assertJsonPath('data.lead_status', 'approved')
+            ->assertJsonPath('fee', 0)
+            ->assertJsonPath('wallet_balance', 99.90);
+
+        $this->assertSame(99.90, (float) $this->user->fresh()->wallet_balance);
+        $this->assertSame(1, WalletTransaction::query()->count());
+        $this->assertDatabaseHas('lead_status_snapshots', [
+            'user_id' => $this->user->id,
+            'lead_code' => 'BS-LEAD-987654',
+            'last_status' => 'approved',
+        ]);
+    }
+
+    public function test_lead_status_insufficient_wallet_does_not_store_approved(): void
+    {
+        $this->user->update(['wallet_balance' => 0.05]);
+        $this->enableService(ProductApiService::SERVICE_LEAD_GENERATION, 0.10);
+        $this->actingAs($this->user, 'sanctum');
+
+        Http::fake([
+            'tryleadapi.example.test/*' => Http::response([
+                'status' => true,
+                'data' => [
+                    'lead_code' => 'BS-LEAD-987654',
+                    'lead_status' => 'approved',
+                ],
+            ], 200),
+        ]);
+
+        $this->getJson(route('api.v1.leads.status', ['lead_code' => 'BS-LEAD-987654']))
+            ->assertStatus(400)
+            ->assertJsonPath('status', 'error');
+
+        $this->assertSame(0.05, (float) $this->user->fresh()->wallet_balance);
+        $this->assertSame(0, WalletTransaction::query()->count());
+        $this->assertDatabaseMissing('lead_status_snapshots', [
+            'user_id' => $this->user->id,
+            'lead_code' => 'BS-LEAD-987654',
+        ]);
+
+        $this->user->update(['wallet_balance' => 100]);
+
+        $this->getJson(route('api.v1.leads.status', ['lead_code' => 'BS-LEAD-987654']))
+            ->assertOk()
+            ->assertJsonPath('data.lead_status', 'approved')
+            ->assertJsonPath('fee', 0.10);
+
+        $this->assertSame(99.90, (float) $this->user->fresh()->wallet_balance);
+    }
+
+    public function test_whitelabel_create_lead_does_not_charge(): void
+    {
+        $whitelabel = Whitelabel::factory()->withFloat(100)->create();
         $developer = User::factory()->forWhitelabel($whitelabel->id)->create([
             'wallet_balance' => 50,
             'onboarding_status' => OnboardingStatus::Approved,
         ]);
         $developer->assignRole(Role::Developer->value);
 
-        \App\Models\WhitelabelPlanApiAccess::query()->create([
+        WhitelabelPlanApiAccess::query()->create([
             'whitelabel_id' => $whitelabel->id,
             'service' => ProductApiService::SERVICE_LEAD_GENERATION,
             'per_call_fee' => 0.10,
@@ -238,10 +372,122 @@ class LeadApiTest extends TestCase
             'product_id' => '12345',
         ])
             ->assertOk()
+            ->assertJsonPath('fee', 0)
+            ->assertJsonPath('wallet_balance', 50);
+
+        $this->assertSame(50.0, (float) $developer->fresh()->wallet_balance);
+        $this->assertSame(100.0, (float) $whitelabel->fresh()->wallet_balance);
+        $this->assertSame(0, WhitelabelWalletTransaction::query()->count());
+    }
+
+    public function test_whitelabel_lead_status_debits_fee_and_credits_margin_on_new_approved(): void
+    {
+        $whitelabel = Whitelabel::factory()->withFloat(100)->create();
+        $developer = User::factory()->forWhitelabel($whitelabel->id)->create([
+            'wallet_balance' => 50,
+            'onboarding_status' => OnboardingStatus::Approved,
+        ]);
+        $developer->assignRole(Role::Developer->value);
+
+        WhitelabelPlanApiAccess::query()->create([
+            'whitelabel_id' => $whitelabel->id,
+            'service' => ProductApiService::SERVICE_LEAD_GENERATION,
+            'per_call_fee' => 0.10,
+            'status' => true,
+        ]);
+
+        UserPlanApiAccess::query()->create([
+            'user_id' => $developer->id,
+            'service' => ProductApiService::SERVICE_LEAD_GENERATION,
+            'per_call_fee' => 0.15,
+            'status' => true,
+        ]);
+
+        $this->actingAs($developer, 'sanctum');
+
+        Http::fake([
+            'tryleadapi.example.test/*' => Http::sequence()
+                ->push([
+                    'status' => true,
+                    'data' => [
+                        'lead_code' => 'BS-LEAD-987654',
+                        'lead_status' => 'pending',
+                    ],
+                ], 200)
+                ->push([
+                    'status' => true,
+                    'data' => [
+                        'lead_code' => 'BS-LEAD-987654',
+                        'lead_status' => 'approved',
+                    ],
+                ], 200)
+                ->push([
+                    'status' => true,
+                    'data' => [
+                        'lead_code' => 'BS-LEAD-987654',
+                        'lead_status' => 'approved',
+                    ],
+                ], 200),
+        ]);
+
+        $this->getJson(route('api.v1.leads.status', ['lead_code' => 'BS-LEAD-987654']))
+            ->assertOk()
+            ->assertJsonPath('fee', 0);
+
+        $this->assertSame(50.0, (float) $developer->fresh()->wallet_balance);
+        $this->assertSame(100.0, (float) $whitelabel->fresh()->wallet_balance);
+
+        $this->getJson(route('api.v1.leads.status', ['lead_code' => 'BS-LEAD-987654']))
+            ->assertOk()
             ->assertJsonPath('fee', 0.15)
             ->assertJsonPath('wallet_balance', 49.85);
 
         $this->assertSame(49.85, (float) $developer->fresh()->wallet_balance);
         $this->assertSame(99.90, (float) $whitelabel->fresh()->wallet_balance);
+
+        $this->assertDatabaseHas('whitelabel_wallet_transactions', [
+            'whitelabel_id' => $whitelabel->id,
+            'type' => 'debit',
+            'amount' => -0.15,
+        ]);
+        $this->assertDatabaseHas('whitelabel_wallet_transactions', [
+            'whitelabel_id' => $whitelabel->id,
+            'type' => 'credit',
+            'amount' => 0.05,
+        ]);
+
+        $this->getJson(route('api.v1.leads.status', ['lead_code' => 'BS-LEAD-987654']))
+            ->assertOk()
+            ->assertJsonPath('fee', 0)
+            ->assertJsonPath('wallet_balance', 49.85);
+
+        $this->assertSame(49.85, (float) $developer->fresh()->wallet_balance);
+        $this->assertSame(99.90, (float) $whitelabel->fresh()->wallet_balance);
+    }
+
+    public function test_whitelabel_inactive_wl_service_blocks_lead_status(): void
+    {
+        $whitelabel = Whitelabel::factory()->withFloat(100)->create();
+        $developer = User::factory()->forWhitelabel($whitelabel->id)->create([
+            'wallet_balance' => 50,
+            'onboarding_status' => OnboardingStatus::Approved,
+        ]);
+        $developer->assignRole(Role::Developer->value);
+
+        UserPlanApiAccess::query()->create([
+            'user_id' => $developer->id,
+            'service' => ProductApiService::SERVICE_LEAD_GENERATION,
+            'per_call_fee' => 0.15,
+            'status' => true,
+        ]);
+
+        $this->actingAs($developer, 'sanctum');
+
+        $this->getJson(route('api.v1.leads.status', ['lead_code' => 'BS-LEAD-987654']))
+            ->assertStatus(503)
+            ->assertJsonPath('code', 'SERVICE_UNAVAILABLE');
+
+        $this->assertSame(50.0, (float) $developer->fresh()->wallet_balance);
+        $this->assertSame(100.0, (float) $whitelabel->fresh()->wallet_balance);
     }
 }

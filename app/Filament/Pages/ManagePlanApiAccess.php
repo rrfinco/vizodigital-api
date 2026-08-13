@@ -68,7 +68,7 @@ class ManagePlanApiAccess extends Page
         [
             'key' => 'lead_generation',
             'label' => 'Lead generation',
-            'description' => 'Catalog + details included. Per-lead fee is charged only when a lead is created.',
+            'description' => 'Catalog, create lead, and pending status included. Per-lead fee is charged when Lead Status first returns approved.',
             'default_fee' => '0.10',
         ],
     ];

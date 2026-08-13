@@ -17,6 +17,7 @@ use App\Models\EndpointRequestBody;
 use App\Models\EndpointResponse;
 use App\Services\ProductApi\ProductApiService;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Collection;
 
 class ProductApiDocumentationSeeder extends Seeder
 {
@@ -50,7 +51,7 @@ class ProductApiDocumentationSeeder extends Seeder
             ],
             [
                 'name' => 'Lead generation',
-                'description' => 'Catalog, apply URL, create lead, and status — billed per lead.',
+                'description' => 'Catalog, apply URL, create lead, and status — billed when a lead is approved.',
                 'status' => PublishStatus::Published,
                 'sort_order' => 1,
             ]
@@ -89,7 +90,7 @@ Use this before **Products by Category**.
 
 **Access & billing**
 - Admin must enable **Lead generation** (`lead_generation`) for your account.
-- This call is included — **fee = 0**. The per-lead fee is charged only on **Create Lead**.
+- This call is included — **fee = 0**. The per-lead fee is charged on **Lead Status** when the status first becomes `approved`.
 - Provider credentials are applied server-side.
 
 No request body. Authenticate with a Bearer token.
@@ -166,7 +167,7 @@ BASH;
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, ApiEnvironment>  $environments
+     * @param  Collection<int, ApiEnvironment>  $environments
      */
     private function seedProductsByCategory(ApiVersion $version, ApiGroup $group, $environments): void
     {
@@ -207,7 +208,7 @@ Returns products in the given category.
 
 **Access & billing**
 - Admin must enable **Lead generation** (`lead_generation`) for your account.
-- This call is included — **fee = 0**. The per-lead fee is charged only on **Create Lead**.
+- This call is included — **fee = 0**. The per-lead fee is charged on **Lead Status** when the status first becomes `approved`.
 
 **Common category IDs**
 - `3` — Credit Cards
@@ -296,7 +297,7 @@ BASH;
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, ApiEnvironment>  $environments
+     * @param  Collection<int, ApiEnvironment>  $environments
      */
     private function seedProductDetails(ApiVersion $version, ApiGroup $group, $environments): void
     {
@@ -332,7 +333,7 @@ Returns the apply URL for a product from **Products by Category**.
 
 **Access & billing**
 - Admin must enable **Lead generation** (`lead_generation`) for your account.
-- This call is included — **fee = 0**. The per-lead fee is charged only on **Create Lead**.
+- This call is included — **fee = 0**. The per-lead fee is charged on **Lead Status** when the status first becomes `approved`.
 - Provider credentials (including customer id) are applied server-side.
 
 `product_id` is required. `category_id` is optional. `card_id` is optional (credit card cases).
