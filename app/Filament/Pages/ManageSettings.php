@@ -123,7 +123,7 @@ class ManageSettings extends Page
                         TextInput::make('roundpay_token')
                             ->label('Roundpay API Token')
                             ->required()
-                            ->maxLength(255)
+                            ->maxLength(8192)
                             ->autocomplete(false),
                         TextInput::make('roundpay_route_type')
                             ->label('Route Type')
@@ -163,7 +163,7 @@ class ManageSettings extends Page
                         TextInput::make('rrfinco_api_token')
                             ->label('API Bearer Token')
                             ->required()
-                            ->maxLength(255)
+                            ->maxLength(8192)
                             ->autocomplete(false),
                         TextInput::make('rrfinco_salt_key')
                             ->label('Salt Key')
@@ -180,7 +180,7 @@ class ManageSettings extends Page
                             ->maxLength(255),
                         TextInput::make('inspay_token')
                             ->label('Token')
-                            ->maxLength(255)
+                            ->maxLength(8192)
                             ->autocomplete(false),
                     ]),
 
@@ -193,7 +193,7 @@ class ManageSettings extends Page
                             ->maxLength(255),
                         TextInput::make('ekychub_token')
                             ->label('Token')
-                            ->maxLength(255)
+                            ->maxLength(8192)
                             ->autocomplete(false),
                     ]),
 
@@ -203,7 +203,7 @@ class ManageSettings extends Page
                     ->schema([
                         TextInput::make('mokshiq_token')
                             ->label('Token')
-                            ->maxLength(255)
+                            ->maxLength(8192)
                             ->autocomplete(false)
                             ->helperText('Authorization Bearer token'),
                         TextInput::make('mokshiq_pin')
