@@ -242,7 +242,19 @@ class PortalSettings
 
     public function banksathiBaseUrl(): string
     {
-        return (string) $this->get('banksathi_base_url', '');
+        return self::normalizeBanksathiBaseUrl((string) $this->get('banksathi_base_url', ''));
+    }
+
+    public static function normalizeBanksathiBaseUrl(string $baseUrl): string
+    {
+        $normalized = rtrim(trim($baseUrl), '/');
+        $suffix = '/api/b2b';
+
+        while (str_ends_with(strtolower($normalized), $suffix)) {
+            $normalized = rtrim(substr($normalized, 0, -strlen($suffix)), '/');
+        }
+
+        return $normalized;
     }
 
     public function banksathiIv(): string

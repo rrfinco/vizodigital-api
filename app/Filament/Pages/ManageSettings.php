@@ -229,7 +229,8 @@ class ManageSettings extends Page
                             ->label('Base URL')
                             ->url()
                             ->maxLength(255)
-                            ->columnSpanFull(),
+                            ->columnSpanFull()
+                            ->helperText('Origin only — do not include /api/b2b (e.g. https://tryleadapi.example.com)'),
                         TextInput::make('banksathi_iv')
                             ->label('IV')
                             ->maxLength(255)
@@ -310,7 +311,11 @@ class ManageSettings extends Page
         $settings->set('mokshiq_pin', $state['mokshiq_pin'] ?? '', 'recharge');
         $settings->set('mokshiq_origin', $state['mokshiq_origin'] ?? '', 'recharge');
 
-        $settings->set('banksathi_base_url', $state['banksathi_base_url'] ?? '', 'banksathi');
+        $settings->set(
+            'banksathi_base_url',
+            PortalSettings::normalizeBanksathiBaseUrl((string) ($state['banksathi_base_url'] ?? '')),
+            'banksathi'
+        );
         $settings->set('banksathi_iv', $state['banksathi_iv'] ?? '', 'banksathi');
         $settings->set('banksathi_api_key', $state['banksathi_api_key'] ?? '', 'banksathi');
         $settings->set('banksathi_customer_id', $state['banksathi_customer_id'] ?? '', 'banksathi');

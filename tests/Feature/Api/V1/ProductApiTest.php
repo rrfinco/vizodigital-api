@@ -109,6 +109,28 @@ class ProductApiTest extends TestCase
         });
     }
 
+    public function test_product_categories_strips_api_b2b_from_configured_base_url(): void
+    {
+        Setting::setValue('banksathi_base_url', 'https://tryleadapi.example.test/api/b2b', 'banksathi');
+        $this->enableService(ProductApiService::SERVICE_LEAD_GENERATION, 0.10);
+        $this->actingAs($this->user, 'sanctum');
+
+        Http::fake([
+            'tryleadapi.example.test/*' => Http::response($this->providerSuccess(), 200),
+        ]);
+
+        $this->getJson(route('api.v1.products.categories'))
+            ->assertOk()
+            ->assertJsonPath('status', 'success');
+
+        Http::assertSent(function ($request): bool {
+            return $request->url() === 'https://tryleadapi.example.test/api/b2b/allProductCategory';
+        });
+        Http::assertNotSent(function ($request): bool {
+            return str_contains($request->url(), '/api/b2b/api/b2b/');
+        });
+    }
+
     public function test_product_categories_provider_failure_does_not_touch_wallet(): void
     {
         $this->enableService(ProductApiService::SERVICE_LEAD_GENERATION, 0.10);
