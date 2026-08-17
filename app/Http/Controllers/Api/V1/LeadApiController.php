@@ -17,12 +17,65 @@ class LeadApiController extends Controller
         private readonly ProductApiService $productApi
     ) {}
 
+    public function profile(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'first_name' => ['required', 'string', 'max:50'],
+            'last_name' => ['required', 'string', 'max:50'],
+            'mobile_no' => ['required', 'digits:10'],
+            'email' => ['required', 'email', 'max:150'],
+            'dob' => ['required', 'date_format:Y-m-d'],
+            'company' => ['required', 'integer', 'min:1'],
+            'occupation' => ['required', 'integer', 'min:1'],
+            'monthly_salary' => ['required', 'numeric', 'min:0'],
+            'itr_amount' => ['required', 'numeric', 'min:0'],
+            'gender' => ['required', 'in:Male,Female,Other'],
+            'pincode' => ['required', 'integer', 'min:1'],
+            'address' => ['required', 'string', 'max:255'],
+            'category' => ['required', 'in:Individual,Non-Individual'],
+            'category_id' => ['required', 'integer', 'min:1'],
+            'pan' => ['required', 'string', 'size:10', 'regex:/^[A-Z]{5}[0-9]{4}[A-Z]$/i'],
+            'customer_id' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationError($validator->errors());
+        }
+
+        $validated = $validator->validated();
+        $validated['pan'] = strtoupper((string) $validated['pan']);
+        $validated['mobile_no'] = (string) $validated['mobile_no'];
+        $validated['company'] = (int) $validated['company'];
+        $validated['occupation'] = (int) $validated['occupation'];
+        $validated['category_id'] = (int) $validated['category_id'];
+        $validated['pincode'] = (int) $validated['pincode'];
+        $validated['monthly_salary'] = (int) $validated['monthly_salary'];
+        $validated['itr_amount'] = (int) $validated['itr_amount'];
+
+        if (isset($validated['customer_id']) && $validated['customer_id'] === '') {
+            unset($validated['customer_id']);
+        }
+
+        return $this->respond($request, function (User $user) use ($validated) {
+            $result = $this->productApi->createLeadProfile($user, $validated);
+            $provider = $result['provider'];
+
+            return [
+                'message' => $provider['message'] ?? 'Customer profile saved',
+                'data' => $this->normalizeProfile($provider['data'] ?? []),
+                'fee' => $result['fee'],
+                'wallet_balance' => $result['wallet_balance'],
+            ];
+        });
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
             'product_id' => ['required', 'string', 'max:64'],
             'category_id' => ['nullable', 'integer', 'min:1'],
             'required_amount' => ['nullable', 'numeric', 'min:0'],
+            'customer_id' => ['nullable', 'string', 'max:255'],
         ]);
 
         if ($validator->fails()) {
@@ -121,7 +174,6 @@ class LeadApiController extends Controller
     }
 
     /**
-     * @param  mixed  $data
      * @return array{lead_code: string, campaign_url: string}
      */
     private function normalizeLead(mixed $data): array
@@ -135,7 +187,24 @@ class LeadApiController extends Controller
     }
 
     /**
-     * @param  mixed  $data
+     * @return array{customer_id: string, mobile_no: string, category_id: string, product_id: string|null}
+     */
+    private function normalizeProfile(mixed $data): array
+    {
+        $row = is_array($data) ? $data : [];
+        $details = is_array($row['profile_details'] ?? null) ? $row['profile_details'] : $row;
+
+        $productId = $details['product_id'] ?? $row['product_id'] ?? null;
+
+        return [
+            'customer_id' => (string) ($details['customer_id'] ?? $row['customer_id'] ?? ''),
+            'mobile_no' => (string) ($row['mobile_no'] ?? $details['mobile_no'] ?? ''),
+            'category_id' => (string) ($details['category_id'] ?? $row['category_id'] ?? ''),
+            'product_id' => $productId === null || $productId === '' ? null : (string) $productId,
+        ];
+    }
+
+    /**
      * @return array{lead_code: string, lead_status: string}
      */
     private function normalizeStatus(mixed $data, string $fallbackLeadCode): array

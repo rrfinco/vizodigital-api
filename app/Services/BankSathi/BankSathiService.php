@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Log;
 
 class BankSathiService
 {
+    public const SELF_EMPLOYED_OCCUPATION_ID = 2;
+
     public function __construct(
         private readonly PortalSettings $settings
     ) {}
@@ -53,18 +55,81 @@ class BankSathiService
     }
 
     /**
+     * Create or update a BankSathi customer profile and return their encrypted customer_id.
+     *
+     * @param  array{
+     *     first_name: string,
+     *     last_name: string,
+     *     mobile_no: string,
+     *     email: string,
+     *     dob: string,
+     *     company: int,
+     *     occupation: int,
+     *     monthly_salary: int|float,
+     *     itr_amount: int|float,
+     *     gender: string,
+     *     pincode: int|string,
+     *     address: string,
+     *     category: string,
+     *     category_id: int,
+     *     pan: string,
+     *     customer_id?: string|null
+     * }  $data
      * @return array<string, mixed>
      */
-    public function createLead(string $productId, ?int $categoryId = null, ?float $requiredAmount = null): array
+    public function createLeadProfile(array $data): array
     {
-        $customerId = $this->settings->banksathiCustomerId();
+        $occupation = (int) $data['occupation'];
+        $isSelfEmployed = $occupation === self::SELF_EMPLOYED_OCCUPATION_ID;
+        $pan = strtoupper(trim((string) $data['pan']));
 
-        if ($customerId === '') {
+        $payload = array_filter([
+            'first_name' => $data['first_name'],
+            'last_name' => $data['last_name'],
+            'mobile_no' => $data['mobile_no'],
+            'email' => $data['email'],
+            'dob' => $data['dob'],
+            'company' => $data['company'],
+            'occupation' => $occupation,
+            'monthly_salary' => $isSelfEmployed ? 0 : $data['monthly_salary'],
+            'itr_amount' => $isSelfEmployed ? $data['itr_amount'] : 0,
+            'gender' => $data['gender'],
+            'Gender' => $data['gender'],
+            'pincode' => $data['pincode'],
+            'address' => $data['address'],
+            'Address' => $data['address'],
+            'category' => $data['category'],
+            'category_id' => $data['category_id'],
+            'pan' => $pan,
+            'pan_no' => $pan,
+            'customer_id' => $data['customer_id'] ?? null,
+        ], fn ($value) => $value !== null && $value !== '');
+
+        return $this->postForm('/api/b2b/createLeadProfile', $payload, [
+            'mobile_no' => $data['mobile_no'],
+            'category_id' => $data['category_id'],
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function createLead(
+        string $productId,
+        ?int $categoryId = null,
+        ?float $requiredAmount = null,
+        ?string $customerId = null,
+    ): array {
+        $resolvedCustomerId = $customerId !== null && $customerId !== ''
+            ? $customerId
+            : $this->settings->banksathiCustomerId();
+
+        if ($resolvedCustomerId === '') {
             throw new \RuntimeException('Product API credentials are not configured. Ask an admin to set Customer ID in Settings.');
         }
 
         $payload = array_filter([
-            'customer_id' => $customerId,
+            'customer_id' => $resolvedCustomerId,
             'product_id' => $productId,
             'category_id' => $categoryId,
             'categroy_id' => $categoryId,
@@ -103,10 +168,21 @@ class BankSathiService
     }
 
     /**
-     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $query
      * @return array<string, mixed>
      */
-    private function send(string $method, string $path, array $data = []): array
+    private function postForm(string $path, array $payload, array $query = []): array
+    {
+        return $this->send('POST', $path, $payload, asForm: true, query: $query);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $query
+     * @return array<string, mixed>
+     */
+    private function send(string $method, string $path, array $data = [], bool $asForm = false, array $query = []): array
     {
         $baseUrl = rtrim($this->settings->banksathiBaseUrl(), '/');
         $apiKey = $this->settings->banksathiApiKey();
@@ -119,17 +195,22 @@ class BankSathiService
         $url = $baseUrl.$path;
         $isGet = strtoupper($method) === 'GET';
 
+        if ($query !== []) {
+            $url .= (str_contains($url, '?') ? '&' : '?').http_build_query($query);
+        }
+
         Log::info("Product API request: {$method} {$url}", [
-            $isGet ? 'query' : 'body' => $isGet ? $data : array_merge($data, ['customer_id' => '***']),
+            $isGet ? 'query' : 'body' => $this->redactLogPayload($data),
         ]);
 
         $pending = Http::timeout(45)
             ->acceptJson()
-            ->asJson()
             ->withHeaders([
                 'x-api-key' => $apiKey,
                 'iv' => $iv,
             ]);
+
+        $pending = $asForm ? $pending->asForm() : $pending->asJson();
 
         $response = $isGet
             ? $pending->get($url, $data)
@@ -137,7 +218,7 @@ class BankSathiService
 
         Log::info("Product API response: {$url}", [
             'status' => $response->status(),
-            'body' => $response->json() ?? $response->body(),
+            'body' => $this->redactLogPayload($response->json() ?? ['raw' => $response->body()]),
         ]);
 
         if ($response->failed()) {
@@ -153,6 +234,43 @@ class BankSathiService
         }
 
         return $json;
+    }
+
+    /**
+     * @param  array<string, mixed>|mixed  $payload
+     * @return array<string, mixed>|mixed
+     */
+    private function redactLogPayload(mixed $payload): mixed
+    {
+        if (! is_array($payload)) {
+            return $payload;
+        }
+
+        $sensitive = [
+            'customer_id',
+            'pan',
+            'pan_no',
+            'mobile_no',
+            'email',
+            'first_name',
+            'last_name',
+            'address',
+            'Address',
+        ];
+
+        $redacted = [];
+
+        foreach ($payload as $key => $value) {
+            if (in_array((string) $key, $sensitive, true)) {
+                $redacted[$key] = '***';
+
+                continue;
+            }
+
+            $redacted[$key] = is_array($value) ? $this->redactLogPayload($value) : $value;
+        }
+
+        return $redacted;
     }
 
     public function isSuccess(array $response): bool

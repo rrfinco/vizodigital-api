@@ -71,7 +71,20 @@ class ProductApiService
     }
 
     /**
-     * @param  array{product_id: string, category_id?: int|null, required_amount?: float|int|null}  $data
+     * @param  array<string, mixed>  $data
+     * @return array{provider: array<string, mixed>, fee: float, wallet_balance: float}
+     */
+    public function createLeadProfile(User $user, array $data): array
+    {
+        return $this->execute($user, function () use ($user, $data) {
+            return $this->isUatToken($user)
+                ? $this->uatMock->createLeadProfile($data)
+                : $this->bankSathi->createLeadProfile($data);
+        });
+    }
+
+    /**
+     * @param  array{product_id: string, category_id?: int|null, required_amount?: float|int|null, customer_id?: string|null}  $data
      * @return array{provider: array<string, mixed>, fee: float, wallet_balance: float}
      */
     public function createLead(User $user, array $data): array
@@ -83,11 +96,14 @@ class ProductApiService
         $requiredAmount = isset($data['required_amount']) && $data['required_amount'] !== null
             ? (float) $data['required_amount']
             : null;
+        $customerId = isset($data['customer_id']) && $data['customer_id'] !== null && $data['customer_id'] !== ''
+            ? (string) $data['customer_id']
+            : null;
 
-        return $this->execute($user, function () use ($user, $productId, $categoryId, $requiredAmount) {
+        return $this->execute($user, function () use ($user, $productId, $categoryId, $requiredAmount, $customerId) {
             return $this->isUatToken($user)
                 ? $this->uatMock->createLead($productId)
-                : $this->bankSathi->createLead($productId, $categoryId, $requiredAmount);
+                : $this->bankSathi->createLead($productId, $categoryId, $requiredAmount, $customerId);
         });
     }
 

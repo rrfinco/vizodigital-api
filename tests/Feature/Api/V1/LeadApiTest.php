@@ -54,6 +54,31 @@ class LeadApiTest extends TestCase
         );
     }
 
+    /**
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function profilePayload(array $overrides = []): array
+    {
+        return array_merge([
+            'first_name' => 'Rajesh',
+            'last_name' => 'Jha',
+            'mobile_no' => '9110409809',
+            'email' => 'rajesh@example.com',
+            'dob' => '1990-12-10',
+            'company' => 75,
+            'occupation' => 1,
+            'monthly_salary' => 50000,
+            'itr_amount' => 0,
+            'gender' => 'Male',
+            'pincode' => 560001,
+            'address' => 'MG Road, Bengaluru',
+            'category' => 'Individual',
+            'category_id' => 3,
+            'pan' => 'ABCDE1234F',
+        ], $overrides);
+    }
+
     public function test_create_lead_requires_authentication(): void
     {
         $this->postJson(route('api.v1.leads.store'), [
@@ -123,6 +148,224 @@ class LeadApiTest extends TestCase
                 && $request['required_amount'] == 50000
                 && $request->hasHeader('x-api-key', 'TEST_KEY');
         });
+    }
+
+    public function test_create_lead_uses_profile_customer_id_when_provided(): void
+    {
+        $this->enableService(ProductApiService::SERVICE_LEAD_GENERATION, 0.10);
+        $this->actingAs($this->user, 'sanctum');
+
+        Http::fake([
+            'tryleadapi.example.test/*' => Http::response([
+                'status' => true,
+                'data' => [
+                    'lead_code' => 'BS-LEAD-987654',
+                    'campaign_url' => 'https://apply.example.test/campaign/xyz789',
+                ],
+                'message' => 'Lead created',
+            ], 200),
+        ]);
+
+        $this->postJson(route('api.v1.leads.store'), [
+            'product_id' => '12345',
+            'customer_id' => 'aUczK1BLZm1lRmtSNEZ6SGJTaHl0QT09',
+        ])
+            ->assertOk()
+            ->assertJsonPath('status', 'success');
+
+        Http::assertSent(function ($request): bool {
+            return $request->url() === 'https://tryleadapi.example.test/api/b2b/lead'
+                && $request['customer_id'] === 'aUczK1BLZm1lRmtSNEZ6SGJTaHl0QT09';
+        });
+    }
+
+    public function test_create_lead_profile_requires_authentication(): void
+    {
+        $this->postJson(route('api.v1.leads.profile'), $this->profilePayload())
+            ->assertUnauthorized();
+    }
+
+    public function test_create_lead_profile_disabled_returns_403(): void
+    {
+        $this->actingAs($this->user, 'sanctum');
+
+        $this->postJson(route('api.v1.leads.profile'), $this->profilePayload())
+            ->assertStatus(403)
+            ->assertJsonPath('status', 'error')
+            ->assertJsonPath('message', 'This API is not enabled for your account. Contact admin.');
+    }
+
+    public function test_create_lead_profile_validation(): void
+    {
+        $this->enableService(ProductApiService::SERVICE_LEAD_GENERATION);
+        $this->actingAs($this->user, 'sanctum');
+
+        $this->postJson(route('api.v1.leads.profile'), [])
+            ->assertStatus(422)
+            ->assertJsonPath('status', 'error');
+
+        $this->postJson(route('api.v1.leads.profile'), $this->profilePayload([
+            'pan' => 'INVALID',
+            'mobile_no' => '123',
+        ]))
+            ->assertStatus(422)
+            ->assertJsonPath('status', 'error');
+    }
+
+    public function test_create_lead_profile_success_sends_form_and_query(): void
+    {
+        $this->enableService(ProductApiService::SERVICE_LEAD_GENERATION, 0.10);
+        $this->actingAs($this->user, 'sanctum');
+
+        Http::fake([
+            'tryleadapi.example.test/*' => Http::response([
+                'status' => true,
+                'data' => [
+                    'mobile_no' => '9110409809',
+                    'profile_details' => [
+                        'customer_id' => 'aUczK1BLZm1lRmtSNEZ6SGJTaHl0QT09',
+                        'category_id' => '3',
+                        'product_id' => null,
+                    ],
+                ],
+                'message' => 'Customer profile has been created.',
+            ], 200),
+        ]);
+
+        $this->postJson(route('api.v1.leads.profile'), $this->profilePayload([
+            'itr_amount' => 99999,
+        ]))
+            ->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('message', 'Customer profile has been created.')
+            ->assertJsonPath('data.customer_id', 'aUczK1BLZm1lRmtSNEZ6SGJTaHl0QT09')
+            ->assertJsonPath('data.mobile_no', '9110409809')
+            ->assertJsonPath('data.category_id', '3')
+            ->assertJsonPath('data.product_id', null)
+            ->assertJsonPath('fee', 0)
+            ->assertJsonPath('wallet_balance', 100);
+
+        Http::assertSent(function ($request): bool {
+            $query = [];
+            parse_str((string) parse_url($request->url(), PHP_URL_QUERY), $query);
+
+            return str_starts_with($request->url(), 'https://tryleadapi.example.test/api/b2b/createLeadProfile')
+                && ($query['mobile_no'] ?? null) === '9110409809'
+                && (string) ($query['category_id'] ?? '') === '3'
+                && $request['first_name'] === 'Rajesh'
+                && $request['last_name'] === 'Jha'
+                && $request['email'] === 'rajesh@example.com'
+                && $request['pan'] === 'ABCDE1234F'
+                && $request['pan_no'] === 'ABCDE1234F'
+                && (int) $request['monthly_salary'] === 50000
+                && (int) $request['itr_amount'] === 0
+                && ! isset($request['customer_id'])
+                && $request->hasHeader('x-api-key', 'TEST_KEY')
+                && $request->isForm();
+        });
+    }
+
+    public function test_create_lead_profile_update_sends_customer_id(): void
+    {
+        $this->enableService(ProductApiService::SERVICE_LEAD_GENERATION, 0.10);
+        $this->actingAs($this->user, 'sanctum');
+
+        Http::fake([
+            'tryleadapi.example.test/*' => Http::response([
+                'status' => true,
+                'data' => [
+                    'mobile_no' => '9110409809',
+                    'profile_details' => [
+                        'customer_id' => 'aUczK1BLZm1lRmtSNEZ6SGJTaHl0QT09',
+                        'category_id' => '3',
+                        'product_id' => null,
+                    ],
+                ],
+                'message' => 'Customer profile has been updated.',
+            ], 200),
+        ]);
+
+        $this->postJson(route('api.v1.leads.profile'), $this->profilePayload([
+            'customer_id' => 'aUczK1BLZm1lRmtSNEZ6SGJTaHl0QT09',
+        ]))
+            ->assertOk()
+            ->assertJsonPath('message', 'Customer profile has been updated.')
+            ->assertJsonPath('data.customer_id', 'aUczK1BLZm1lRmtSNEZ6SGJTaHl0QT09');
+
+        Http::assertSent(function ($request): bool {
+            return str_contains($request->url(), '/api/b2b/createLeadProfile')
+                && $request['customer_id'] === 'aUczK1BLZm1lRmtSNEZ6SGJTaHl0QT09';
+        });
+    }
+
+    public function test_create_lead_profile_self_employed_sends_itr_and_zero_salary(): void
+    {
+        $this->enableService(ProductApiService::SERVICE_LEAD_GENERATION, 0.10);
+        $this->actingAs($this->user, 'sanctum');
+
+        Http::fake([
+            'tryleadapi.example.test/*' => Http::response([
+                'status' => true,
+                'data' => [
+                    'mobile_no' => '9110409809',
+                    'profile_details' => [
+                        'customer_id' => 'aUczK1BLZm1lRmtSNEZ6SGJTaHl0QT09',
+                        'category_id' => '3',
+                        'product_id' => null,
+                    ],
+                ],
+                'message' => 'Customer profile has been created.',
+            ], 200),
+        ]);
+
+        $this->postJson(route('api.v1.leads.profile'), $this->profilePayload([
+            'occupation' => 2,
+            'monthly_salary' => 50000,
+            'itr_amount' => 120000,
+        ]))->assertOk();
+
+        Http::assertSent(function ($request): bool {
+            return str_contains($request->url(), '/api/b2b/createLeadProfile')
+                && (int) $request['occupation'] === 2
+                && (int) $request['monthly_salary'] === 0
+                && (int) $request['itr_amount'] === 120000;
+        });
+    }
+
+    public function test_create_lead_profile_forwards_provider_error(): void
+    {
+        $this->enableService(ProductApiService::SERVICE_LEAD_GENERATION, 0.10);
+        $this->actingAs($this->user, 'sanctum');
+
+        Http::fake([
+            'tryleadapi.example.test/*' => Http::response([
+                'status' => false,
+                'data' => [],
+                'message' => 'Pan no ABCDE1234F is associated with another mobile number XXXXXXXX01',
+            ], 200),
+        ]);
+
+        $this->postJson(route('api.v1.leads.profile'), $this->profilePayload())
+            ->assertStatus(400)
+            ->assertJsonPath('status', 'error')
+            ->assertJsonPath('message', 'Pan no ABCDE1234F is associated with another mobile number XXXXXXXX01');
+    }
+
+    public function test_uat_token_returns_mock_lead_profile_without_http(): void
+    {
+        $this->enableService(ProductApiService::SERVICE_LEAD_GENERATION, 0.10);
+
+        $plain = $this->user->createToken('uat-lead-profile-test', ['*', 'environment:uat'])->plainTextToken;
+
+        Http::fake();
+
+        $this->withToken($plain)->postJson(route('api.v1.leads.profile'), $this->profilePayload())
+            ->assertOk()
+            ->assertJsonPath('data.customer_id', 'UAT-CUST-9809')
+            ->assertJsonPath('data.mobile_no', '9110409809')
+            ->assertJsonPath('fee', 0);
+
+        Http::assertNothingSent();
     }
 
     public function test_uat_token_returns_mock_lead_without_http_or_fee(): void

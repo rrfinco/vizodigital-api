@@ -2,6 +2,11 @@
 
 use App\Http\Controllers\Api\V1\Auth\ClientCredentialController;
 use App\Http\Controllers\Api\V1\Auth\TokenController;
+use App\Http\Controllers\Api\V1\CreditCardBillPaymentController;
+use App\Http\Controllers\Api\V1\LeadApiController;
+use App\Http\Controllers\Api\V1\PaymentController;
+use App\Http\Controllers\Api\V1\PlanApiController;
+use App\Http\Controllers\Api\V1\ProductApiController;
 use App\Http\Controllers\Api\V1\RechargeController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,40 +28,43 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         Route::post('/recharge', [RechargeController::class, 'store'])
             ->name('recharge');
 
-        Route::post('/payment/create', [\App\Http\Controllers\Api\V1\PaymentController::class, 'store'])
+        Route::post('/payment/create', [PaymentController::class, 'store'])
             ->name('payment.create');
 
-        Route::post('/bill-payment/credit-card/bill-fetch', [\App\Http\Controllers\Api\V1\CreditCardBillPaymentController::class, 'fetch'])
+        Route::post('/bill-payment/credit-card/bill-fetch', [CreditCardBillPaymentController::class, 'fetch'])
             ->name('bill-payment.credit-card.fetch');
 
-        Route::post('/bill-payment/credit-card/bill-pay', [\App\Http\Controllers\Api\V1\CreditCardBillPaymentController::class, 'pay'])
+        Route::post('/bill-payment/credit-card/bill-pay', [CreditCardBillPaymentController::class, 'pay'])
             ->name('bill-payment.credit-card.pay');
 
-        Route::post('/plan/operator-fetch', [\App\Http\Controllers\Api\V1\PlanApiController::class, 'operatorFetch'])
+        Route::post('/plan/operator-fetch', [PlanApiController::class, 'operatorFetch'])
             ->name('plan.operator-fetch');
 
-        Route::post('/plan/operator-plan-fetch', [\App\Http\Controllers\Api\V1\PlanApiController::class, 'operatorPlanFetch'])
+        Route::post('/plan/operator-plan-fetch', [PlanApiController::class, 'operatorPlanFetch'])
             ->name('plan.operator-plan-fetch');
 
-        Route::post('/plan/dth-plan-fetch', [\App\Http\Controllers\Api\V1\PlanApiController::class, 'dthPlanFetch'])
+        Route::post('/plan/dth-plan-fetch', [PlanApiController::class, 'dthPlanFetch'])
             ->name('plan.dth-plan-fetch');
 
-        Route::post('/plan/dth-info', [\App\Http\Controllers\Api\V1\PlanApiController::class, 'dthInfo'])
+        Route::post('/plan/dth-info', [PlanApiController::class, 'dthInfo'])
             ->name('plan.dth-info');
 
-        Route::get('/products/categories', [\App\Http\Controllers\Api\V1\ProductApiController::class, 'categories'])
+        Route::get('/products/categories', [ProductApiController::class, 'categories'])
             ->name('products.categories');
 
-        Route::get('/products', [\App\Http\Controllers\Api\V1\ProductApiController::class, 'index'])
+        Route::get('/products', [ProductApiController::class, 'index'])
             ->name('products.index');
 
-        Route::post('/products/details', [\App\Http\Controllers\Api\V1\ProductApiController::class, 'details'])
+        Route::post('/products/details', [ProductApiController::class, 'details'])
             ->name('products.details');
 
-        Route::post('/leads', [\App\Http\Controllers\Api\V1\LeadApiController::class, 'store'])
+        Route::post('/leads/profile', [LeadApiController::class, 'profile'])
+            ->name('leads.profile');
+
+        Route::post('/leads', [LeadApiController::class, 'store'])
             ->name('leads.store');
 
-        Route::get('/leads/status', [\App\Http\Controllers\Api\V1\LeadApiController::class, 'status'])
+        Route::get('/leads/status', [LeadApiController::class, 'status'])
             ->name('leads.status');
     });
 });

@@ -63,6 +63,33 @@ class ProductApiUatMock
     }
 
     /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public function createLeadProfile(array $data): array
+    {
+        $customerId = isset($data['customer_id']) && $data['customer_id'] !== null && $data['customer_id'] !== ''
+            ? (string) $data['customer_id']
+            : 'UAT-CUST-'.substr((string) ($data['mobile_no'] ?? '0000'), -4);
+        $isUpdate = isset($data['customer_id']) && $data['customer_id'] !== null && $data['customer_id'] !== '';
+
+        return [
+            'status' => true,
+            'data' => [
+                'mobile_no' => (string) ($data['mobile_no'] ?? ''),
+                'profile_details' => [
+                    'customer_id' => $customerId,
+                    'category_id' => (string) ($data['category_id'] ?? ''),
+                    'product_id' => null,
+                ],
+            ],
+            'message' => $isUpdate
+                ? 'Customer profile has been updated.'
+                : 'Customer profile has been created.',
+        ];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function createLead(string $productId): array
