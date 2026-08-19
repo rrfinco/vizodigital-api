@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PlanApiController;
 use App\Http\Controllers\Api\V1\ProductApiController;
 use App\Http\Controllers\Api\V1\RechargeController;
+use App\Http\Controllers\Api\V1\TaxationController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->name('api.v1.')->group(function (): void {
@@ -66,5 +67,22 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
         Route::get('/leads/status', [LeadApiController::class, 'status'])
             ->name('leads.status');
+
+        Route::get('/taxation/services', [TaxationController::class, 'services'])
+            ->name('taxation.services');
+        Route::post('/taxation/clients', [TaxationController::class, 'storeClient'])
+            ->name('taxation.clients.store');
+        Route::get('/taxation/clients', [TaxationController::class, 'clients'])
+            ->name('taxation.clients.index');
+        Route::post('/taxation/orders', [TaxationController::class, 'storeOrder'])
+            ->name('taxation.orders.store');
+        Route::get('/taxation/orders', [TaxationController::class, 'orders'])
+            ->name('taxation.orders.index');
+        Route::get('/taxation/orders/{order}', [TaxationController::class, 'showOrder'])
+            ->name('taxation.orders.show');
+        Route::post('/taxation/orders/{order}/documents', [TaxationController::class, 'storeDocuments'])
+            ->name('taxation.orders.documents.store');
+        Route::get('/taxation/orders/{order}/documents', [TaxationController::class, 'documents'])
+            ->name('taxation.orders.documents.index');
     });
 });

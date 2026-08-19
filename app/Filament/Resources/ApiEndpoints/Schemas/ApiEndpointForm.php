@@ -87,6 +87,7 @@ class ApiEndpointForm
                                 'dth_info' => 'DTH customer info (dth_info)',
                                 'credit_card_fetch' => 'Credit card bill fetch (credit_card_fetch)',
                                 'lead_generation' => 'Lead generation (lead_generation)',
+                                'taxation' => 'Taxation (taxation)',
                             ])
                             ->searchable()
                             ->nullable(),

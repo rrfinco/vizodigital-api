@@ -20,6 +20,8 @@ class DatabaseSeeder extends Seeder
             PlanApiDocumentationSeeder::class,
             ProductApiDocumentationSeeder::class,
             LeadApiDocumentationSeeder::class,
+            TaxationCatalogSeeder::class,
+            TaxationDocumentationSeeder::class,
         ]);
     }
 }

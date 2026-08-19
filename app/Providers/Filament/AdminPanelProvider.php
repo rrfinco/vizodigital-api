@@ -49,6 +49,7 @@ class AdminPanelProvider extends PanelProvider
             ->navigationGroups([
                 NavigationGroup::make('Documentation CMS')->collapsible(),
                 NavigationGroup::make('System')->collapsible(),
+                NavigationGroup::make('Taxation')->collapsible(),
                 NavigationGroup::make('White-label')->collapsible(),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
