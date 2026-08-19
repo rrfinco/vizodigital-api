@@ -4,6 +4,7 @@ namespace Tests\Feature\Filament;
 
 use App\Enums\Role;
 use App\Filament\User\Pages\RechargeOperators;
+use App\Filament\User\Widgets\DeveloperShortcodesWidget;
 use App\Models\User;
 use App\Models\UserOperatorCommission;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,6 +20,15 @@ class UserPanelRechargeOperatorsTest extends TestCase
         parent::setUp();
 
         $this->seed(\Database\Seeders\RolePermissionSeeder::class);
+    }
+
+    public function test_dashboard_popular_operators_use_canonical_sp_keys(): void
+    {
+        $codes = collect(app(DeveloperShortcodesWidget::class)->getPopularShortcodes());
+
+        $this->assertSame('3', $codes->firstWhere('name', 'Airtel Prepaid')['sp_key']);
+        $this->assertSame('116', $codes->firstWhere('name', 'Jio Prepaid')['sp_key']);
+        $this->assertCount($codes->count(), $codes->pluck('sp_key')->unique());
     }
 
     public function test_developer_can_access_recharge_operators_page(): void
